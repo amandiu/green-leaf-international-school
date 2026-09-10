@@ -318,7 +318,7 @@
   100% { opacity: 1; }
 }
 
-/* News Ticker — LEFT to RIGHT */
+/* News Ticker — RIGHT to LEFT (translateX 0 → -50% for seamless loop of duplicated track) */
 @keyframes newsTicker {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }

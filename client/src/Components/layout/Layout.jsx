@@ -36,8 +36,8 @@ function Layout() {
     <div className="min-h-screen flex flex-col bg-cream-50 font-body text-charcoal-800">
       <Navbar />
 
-      {/* Spacer for fixed navbar */}
-      <div className="h-16 md:h-[72px]" />
+      {/* Spacer for fixed 3-row navbar: mobile = row1 3.5rem + row3 2.25rem = 5.75rem; md = 4 + 2.75 + 2.25 = 9rem */}
+      <div className="h-[5.75rem] md:h-36" aria-hidden="true" />
 
       <main className="flex-1">
         <div

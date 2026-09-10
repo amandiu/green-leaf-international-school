@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 
+/* ═══════════════════════════════════════════
+   NAV LINKS — shared by desktop nav & mobile menu
+   ═══════════════════════════════════════════ */
 const navLinks = [
   { path: '/', label: 'Home' },
   { path: '/about', label: 'About' },
@@ -11,29 +14,51 @@ const navLinks = [
   { path: '/contact', label: 'Contact' },
 ];
 
+/* ═══════════════════════════════════════════
+   LATEST NEWS — existing project placeholder
+   news data (mirrors Home.jsx newsItems).
+   No fabricated school news, no invented dates/URLs.
+   Items are non-clickable until real news URLs exist.
+   ═══════════════════════════════════════════ */
+const tickerItems = [
+  { id: 1, category: 'Notice', title: 'Admission Information for [Year]' },
+  { id: 2, category: 'News', title: '[News Title Placeholder]' },
+  { id: 3, category: 'Event', title: '[School Event Placeholder]' },
+  { id: 4, category: 'Announcement', title: '[Important Announcement]' },
+  { id: 5, category: 'Notice', title: '[Exam Schedule Placeholder]' },
+];
+
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState(false);
   const location = useLocation();
 
   const closeMenu = useCallback(() => setIsOpen(false), []);
 
+  /* Ticker pause/resume — hover + keyboard focus */
+  const pauseTicker = useCallback(() => setIsPaused(true), []);
+  const resumeTicker = useCallback(() => setIsPaused(false), []);
+
+  /* Close mobile menu on route change */
   useEffect(() => {
     closeMenu();
   }, [location.pathname, closeMenu]);
 
+  /* Detect reduced-motion preference */
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    setPrefersReduced(
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    );
   }, []);
 
+  /* Lock body scroll when mobile menu is open */
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
+  /* Escape key closes the mobile menu */
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) closeMenu();
@@ -42,148 +67,230 @@ function Navbar() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, closeMenu]);
 
+  /* Ticker animation style: reduced-motion users get a static,
+     horizontally scrollable news state instead of a moving ticker */
+  const tickerTrackStyle = useMemo(
+    () =>
+      prefersReduced
+        ? {
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }
+        : {
+            width: 'max-content',
+            animation: 'newsTicker 35s linear infinite',
+            animationPlayState: isPaused ? 'paused' : 'running',
+          },
+    [prefersReduced, isPaused],
+  );
+
   return (
     <header
-      className={[
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-350 ease-premium',
-        scrolled
-          ? 'bg-white/97 backdrop-blur-md shadow-nav-scrolled'
-          : 'bg-white/0 backdrop-blur-none',
-      ].join(' ')}
+      className="fixed top-0 left-0 right-0 z-50 bg-cream-50/95 backdrop-blur-xl border-b border-charcoal-200/60 shadow-nav"
       role="banner"
     >
-      <nav className="container-custom" aria-label="Main navigation">
-        <div className="flex items-center justify-between h-16 md:h-[72px]">
-          {/* ── Logo + School Name ── */}
-          <Link
-            to="/"
-            className="flex items-center gap-3 group shrink-0"
-            aria-label="Green Leaf International School & College — Home"
-          >
-            {/* Real school logo */}
-            <img
-              src="/logo.jpg"
-              alt="Green Leaf International School & College Logo"
-              className="w-10 h-10 md:w-11 md:h-11 rounded-lg object-cover transition-transform duration-250 ease-premium group-hover:scale-105 shadow-sm"
-            />
-            <div className="hidden sm:block">
-              <span className="block text-[12px] md:text-[13px] font-bold text-charcoal-900 leading-tight tracking-tight">
-                Green Leaf
-              </span>
-              <span className="block text-[8px] md:text-[9px] text-charcoal-400 tracking-[0.12em] uppercase font-medium leading-tight">
-                International School &amp; College
-              </span>
-            </div>
-          </Link>
-
-          {/* ── Desktop Navigation ── */}
-          <div className="hidden lg:flex items-center gap-0.5">
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                end={link.path === '/'}
-                className={({ isActive }) =>
-                  [
-                    'relative px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200',
-                    isActive
-                      ? 'text-forest-700'
-                      : 'text-charcoal-500 hover:text-charcoal-900',
-                  ].join(' ')
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {link.label}
-                    {isActive && (
-                      <span className="absolute bottom-0.5 left-3 right-3 h-[2px] bg-forest-600 rounded-full" />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </div>
-
-          {/* ── CTA + Mobile Toggle ── */}
-          <div className="flex items-center gap-2.5">
+      <nav aria-label="Main navigation">
+        {/* ═══════════ ROW 1 — SCHOOL BRANDING ═══════════ */}
+        <div className="bg-white/80 border-b border-charcoal-100/70">
+          <div className="container-custom h-14 md:h-16 flex items-center justify-between gap-3">
             <Link
-              to="/admissions"
-              className={[
-                'hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg',
-                'bg-forest-700 text-white text-[13px] font-semibold',
-                'transition-all duration-250 ease-premium',
-                'hover:bg-forest-800 hover:shadow-lg hover:shadow-forest-700/20',
-                'active:bg-forest-900',
-              ].join(' ')}
+              to="/"
+              className="flex items-center gap-2.5 md:gap-3 group shrink-0 min-w-0"
+              aria-label="Green Leaf International School & College — Home"
             >
-              Admission Enquiry
+              {/* Real school logo — do NOT replace */}
+              <img
+                src="/logo.jpg"
+                alt="Green Leaf International School & College Logo"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-lg object-cover shadow-sm transition-transform duration-250 ease-premium group-hover:scale-105"
+              />
+              <div className="leading-tight min-w-0">
+                <span className="block text-[13px] sm:text-[14px] md:text-[15px] font-bold text-charcoal-900 tracking-tight whitespace-nowrap">
+                  Green Leaf
+                </span>
+                <span className="block text-[9px] sm:text-[10px] md:text-[10.5px] text-charcoal-500 tracking-[0.14em] uppercase font-medium whitespace-nowrap">
+                  International School &amp; College
+                </span>
+              </div>
             </Link>
 
-            {/* Mobile hamburger */}
+            {/* Mobile hamburger — only visible below md, keeps Row 1 identity intact */}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="lg:hidden relative w-10 h-10 flex items-center justify-center rounded-lg text-charcoal-600 hover:bg-charcoal-100 transition-colors duration-200"
+              className="md:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-charcoal-600 hover:bg-charcoal-100 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500"
               aria-label={isOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isOpen}
             >
               <div className="w-5 h-4 flex flex-col justify-between">
-                <span className={`block h-[1.5px] bg-current rounded-full transition-all duration-300 origin-center ${isOpen ? 'rotate-45 translate-y-[5px]' : ''}`} />
+                <span className={`block h-[1.5px] bg-current rounded-full transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-[5px]' : ''}`} />
                 <span className={`block h-[1.5px] bg-current rounded-full transition-all duration-300 ${isOpen ? 'opacity-0 scale-x-0' : ''}`} />
-                <span className={`block h-[1.5px] bg-current rounded-full transition-all duration-300 origin-center ${isOpen ? '-rotate-45 -translate-y-[5px]' : ''}`} />
+                <span className={`block h-[1.5px] bg-current rounded-full transition-all duration-300 ${isOpen ? '-rotate-45 -translate-y-[5px]' : ''}`} />
               </div>
             </button>
+
           </div>
         </div>
 
-        {/* ── Mobile Navigation Backdrop ── */}
-        <div
-          className={`lg:hidden fixed inset-0 top-16 bg-charcoal-900/20 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-          onClick={closeMenu}
-          aria-hidden="true"
-        />
+        {/* ═══════════ ROW 2 — MAIN NAVIGATION (desktop ≥ md) ═══════════ */}
+        <div className="hidden md:block bg-white/60 border-b border-charcoal-100/70">
+          <div className="container-custom relative">
+            <div className="flex items-center justify-center gap-1 h-11">
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.path}
+                  to={link.path}
+                  end={link.path === '/'}
+                  className={({ isActive }) =>
+                    [
+                      'relative px-3.5 py-2 text-[13px] font-medium rounded-md transition-all duration-200',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
+                      isActive
+                        ? 'text-forest-700 font-bold'
+                        : 'text-charcoal-600 hover:text-charcoal-900',
+                    ].join(' ')
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {link.label}
+                      {/* Active underline indicator */}
+                      <span
+                        className={[
+                          'absolute bottom-0 left-3 right-3 h-[2px] rounded-full',
+                          'bg-forest-600 transition-all duration-300 ease-premium',
+                          isActive
+                            ? 'opacity-100 scale-x-100'
+                            : 'opacity-0 scale-x-50',
+                        ].join(' ')}
+                      />
+                    </>
+                  )}
+                </NavLink>
+              ))}
 
-        {/* ── Mobile Menu Panel ── */}
-        <div
-          className={[
-            'lg:hidden fixed left-0 right-0 top-16 bg-white border-b border-charcoal-100 shadow-elevated',
-            'transition-all duration-350 ease-premium',
-            isOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none',
-          ].join(' ')}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile navigation"
-        >
-          <div className="container-custom py-3 space-y-0.5">
-            {navLinks.map((link, index) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                end={link.path === '/'}
-                onClick={closeMenu}
-                className={({ isActive }) =>
-                  [
-                    'block px-4 py-2.5 rounded-lg text-[15px] font-medium transition-colors duration-200',
-                    isOpen ? 'animate-[fadeInUp_0.3s_ease-out_forwards]' : '',
-                    isActive ? 'text-forest-700 bg-forest-50' : 'text-charcoal-600 hover:text-charcoal-900 hover:bg-charcoal-50',
-                  ].join(' ')
-                }
-                style={isOpen ? { animationDelay: `${index * 40}ms` } : undefined}
-              >
-                {link.label}
-              </NavLink>
-            ))}
-            <div className="pt-2 px-4">
+              {/* Admission Enquiry CTA — pinned to the right edge of the nav row */}
               <Link
                 to="/admissions"
-                onClick={closeMenu}
-                className="block w-full text-center px-4 py-2.5 rounded-lg bg-forest-700 text-white text-[15px] font-semibold hover:bg-forest-800 transition-colors duration-200"
+                className={ [
+                  'absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center gap-2 px-4 py-2 rounded-lg shrink-0',
+                  'bg-forest-700 text-white text-[13px] font-semibold',
+                  'transition-all duration-250 ease-premium',
+                  'hover:bg-forest-800 hover:shadow-lg hover:shadow-forest-700/20',
+                  'focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2',
+                  'active:bg-forest-900',
+                ].join(' ') }
               >
                 Admission Enquiry
               </Link>
             </div>
           </div>
         </div>
+
+        {/* ═══════════ ROW 3 — LATEST NEWS TICKER ═══════════ */}
+        <div className="bg-forest-50/90 border-b border-forest-100">
+          <div className="container-custom">
+            <div className="flex items-center gap-3 h-9">
+              {/* Static label — only the news content moves */}
+              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-forest-700 text-white text-[10px] font-bold uppercase tracking-[0.14em]">
+                Latest News
+              </span>
+
+              {/* Ticker viewport — moving content is clipped here only */}
+              <div
+                className="relative flex-1 min-w-0 overflow-hidden"
+                onMouseEnter={pauseTicker}
+                onMouseLeave={resumeTicker}
+                onFocus={pauseTicker}
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) resumeTicker();
+                }}
+              >
+                <div
+                  className="flex items-center gap-8 w-max"
+                  style={tickerTrackStyle}
+                  aria-label="Latest news and notices"
+                >
+                  {[...tickerItems, ...tickerItems].map((item, index) => (
+                    <span
+                      key={`${item.id}-${index}`}
+                      className="flex items-center gap-2 whitespace-nowrap"
+                      aria-hidden={index >= tickerItems.length}
+                    >
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white ${['bg-forest-600', 'bg-charcoal-500', 'bg-gold-500', 'bg-leaf-600', 'bg-forest-600'][index % 5]}`}
+                      >
+                        {item.category}
+                      </span>
+                      <span className="text-[11px] text-charcoal-700 font-medium">
+                        {item.title}
+                      </span>
+                      <span className="text-forest-400 text-[11px] font-bold select-none" aria-hidden="true">
+                        →
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </nav>
+
+      {/* ═══════════ MOBILE NAVIGATION (below md) ═══════════ */}
+      {/* Backdrop — covers page but sits under the menu panel */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 bg-charcoal-900/30 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+
+        onClick={closeMenu}
+        aria-hidden="true"
+      />
+
+      {/* Slide-down mobile menu panel with opaque surface */}
+      <div
+        className={[
+          'md:hidden fixed left-0 right-0 z-50 top-[5.75rem]',
+          'bg-white border-b border-charcoal-100 shadow-elevated',
+          'transition-all duration-300 ease-premium',
+          isOpen
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 -translate-y-2 pointer-events-none',
+        ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation"
+      >
+        <div className="container-custom py-3 space-y-0.5">
+          {navLinks.map((link, index) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              end={link.path === '/'}
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                [
+                  'block px-4 py-2.5 rounded-lg text-[15px] font-medium transition-colors duration-200',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
+                  isActive
+                    ? 'text-forest-700 bg-forest-50 font-semibold'
+                    : 'text-charcoal-600 hover:text-charcoal-900 hover:bg-charcoal-50',
+                ].join(' ')
+              }
+              style={isOpen ? { animation: `fadeInUp 0.3s ease-out ${index * 40}ms forwards`, opacity: 0 } : undefined}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+          <div className="pt-2 px-1">
+            <Link
+              to="/admissions"
+              onClick={closeMenu}
+              className="block w-full text-center px-4 py-2.5 rounded-lg bg-forest-700 text-white text-[15px] font-semibold hover:bg-forest-800 active:bg-forest-900 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500 focus-visible:ring-offset-2"
+            >
+              Admission Enquiry
+            </Link>
+          </div>
+        </div>
+      </div>
     </header>
   );
 }
