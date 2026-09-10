@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Allow Cloudflare quick-tunnel hosts (Phase 2B.7) so the dev server
+    // responds when accessed via https://<name>.trycloudflare.com.
+    // Localhost access is unaffected.
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
