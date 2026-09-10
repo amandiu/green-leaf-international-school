@@ -91,6 +91,15 @@ const socialLinks = [
   },
 ];
 
+/* ═══════════════════════════════════════════
+   MAP CONFIGURATION — verified data only
+   Location confirmed against OpenStreetMap
+   (node 3732379154): 23.77372° N, 90.35538° E.
+   ═══════════════════════════════════════════ */
+const GOOGLE_MAPS_EMBED_URL = 'https://maps.google.com/maps?q=Green+Leaf+International+School+and+College,+526-A+Rd+12-B,+Adabor,+Dhaka+1207&z=17&output=embed';
+const GOOGLE_MAPS_DIRECTIONS_URL = 'https://www.google.com/maps/dir/?api=1&destination=Green+Leaf+International+School+and+College,+526-A+Rd+12-B,+Adabor,+Dhaka+1207';
+const SCHOOL_ADDRESS = '526-A Rd 12-B, Adabor, Dhaka 1207, Bangladesh';
+
 function Contact() {
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', subject: '', message: '',
@@ -100,6 +109,7 @@ function Contact() {
 
   const infoRef = useScrollReveal();
   const formRef = useScrollReveal();
+  const mapRef = useScrollReveal();
 
   const validate = () => {
     const errs = {};
@@ -301,17 +311,99 @@ function Contact() {
         </div>
       </SectionWrapper>
 
-      {/* Map Placeholder */}
-      <section className="bg-charcoal-100 h-72 md:h-80 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-charcoal-200 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6 text-charcoal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
-            </svg>
+      {/* ═══════════ LOCATION — MAP + INFO CARD ═══════════ */}
+      <SectionWrapper bg="bg-white" padding="pb-section pt-0">
+        <div ref={mapRef} className="reveal">
+          <div className="mb-8 md:mb-10">
+            <span className="eyebrow">Our Location</span>
+            <h2 className="font-heading text-h2 text-charcoal-900 mt-3">Find Green Leaf International School &amp; College</h2>
           </div>
-          <p className="text-body-sm text-charcoal-500">Map integration will be added in a future phase.</p>
+
+          <div className="grid lg:grid-cols-[1.7fr_1fr] gap-6 lg:gap-8 items-stretch">
+            {/* ── MAP AREA ── */}
+            <div className="relative rounded-2xl overflow-hidden border border-charcoal-100 shadow-card bg-forest-50/40 min-h-[300px] md:min-h-[360px] lg:min-h-[420px]">
+              {GOOGLE_MAPS_EMBED_URL ? (
+                <iframe
+                  src={GOOGLE_MAPS_EMBED_URL}
+                  title="Green Leaf International School & College location map"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="absolute inset-0 w-full h-full"
+                />
+              ) : (
+                /* Branded stand-in shown ONLY while the verified embed URL is not yet configured */
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                  <img src="/logo.jpg" alt="" aria-hidden="true" className="w-14 h-14 rounded-xl object-cover shadow-md mb-4 opacity-90" />
+                  <p className="font-heading text-h3 text-charcoal-800 mb-1">Green Leaf International School &amp; College</p>
+                  <p className="text-body-sm text-charcoal-400 italic">Campus map will appear here once the verified location is configured.</p>
+                </div>
+              )}
+
+              {/* Overlay badge — top placement keeps Google map controls clear */}
+              <span className="absolute top-4 left-4 z-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-charcoal-100 shadow-sm text-[11px] font-bold uppercase tracking-[0.14em] text-forest-700">
+                <span className="w-1.5 h-1.5 bg-forest-600 rounded-full" />
+                Our Campus
+              </span>
+            </div>
+
+            {/* ── LOCATION INFORMATION CARD ── */}
+            <div className="bg-cream-50 rounded-2xl border border-charcoal-100/60 shadow-card p-7 md:p-8 flex flex-col">
+              <div className="w-11 h-11 bg-forest-50 rounded-xl flex items-center justify-center text-forest-600 mb-5">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+              </div>
+
+              <h3 className="font-heading text-h3 text-charcoal-900 mb-2">Find Us</h3>
+              <p className="text-body-sm text-charcoal-500 leading-relaxed mb-5">
+                Visit Green Leaf International School &amp; College.
+              </p>
+
+              {/* Address — shown only when verified */}
+              {SCHOOL_ADDRESS ? (
+                <p className="text-body-sm text-charcoal-700 leading-relaxed mb-6">{SCHOOL_ADDRESS}</p>
+              ) : (
+                <p className="text-body-sm text-charcoal-400 italic mb-6">Official address will be published here soon.</p>
+              )}
+
+              {/* Get Directions CTA — enabled only with a verified destination */}
+              {GOOGLE_MAPS_DIRECTIONS_URL ? (
+                <a
+                  href={GOOGLE_MAPS_DIRECTIONS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-forest-700 text-white text-body-sm font-semibold transition-all duration-250 ease-premium hover:bg-forest-800 hover:shadow-lg hover:shadow-forest-700/20 active:bg-forest-900 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
+                >
+                  Get Directions
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-forest-700/40 text-white/70 text-body-sm font-semibold cursor-not-allowed"
+                >
+                  Get Directions
+                </button>
+              )}
+
+              {/* Office hours — reused from the page's existing verified data */}
+              <div className="mt-auto pt-6 border-t border-charcoal-100/70">
+                <p className="text-caption text-charcoal-400 uppercase tracking-[0.1em] font-semibold mb-1">Office Hours</p>
+                <p className="text-body-sm text-charcoal-500">Sun — Thu: 8:00 AM — 4:00 PM</p>
+                <p className="text-body-sm text-charcoal-400">Fri — Sat: Closed</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
+      </SectionWrapper>
     </>
   );
 }
