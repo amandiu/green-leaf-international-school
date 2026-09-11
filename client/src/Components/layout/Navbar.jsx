@@ -1,18 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import useNavigation from '../../hooks/useNavigation';
 
 /* ═══════════════════════════════════════════
-   NAV LINKS — shared by desktop nav & mobile menu
+   NAV LINKS — now served from the MySQL navigation API
+   (GET /api/navigation → useNavigation). Menu order, labels,
+   active/inactive state and submenus are managed in Admin →
+   Navigation Management. The verified static 7-item list lives
+   only as the safe fallback inside utils/navigation.js.
    ═══════════════════════════════════════════ */
-const navLinks = [
-  { path: '/', label: 'Home' },
-  { path: '/about', label: 'About' },
-  { path: '/academics', label: 'Academics' },
-  { path: '/admissions', label: 'Admissions' },
-  { path: '/campus', label: 'Campus' },
-  { path: '/news', label: 'News' },
-  { path: '/contact', label: 'Contact' },
-];
 
 /* ═══════════════════════════════════════════
    LATEST NEWS — existing project placeholder
@@ -84,6 +80,159 @@ function Navbar() {
     [prefersReduced, isPaused],
   );
 
+  /* Data-driven navigation (Phase 3.4): one API request per mount,
+     fallback keeps the menu shape stable while loading/on error. */
+  const { items: navItems } = useNavigation();
+
+  /* ---- Desktop Row 2 rendering (same visual classes as before).
+     item.children are kept on each entry for the dedicated
+     dropdown UI phase — they are not yet rendered inline here. */
+  const desktopLinkClass = (active) =>
+    [
+      'relative px-3.5 py-2 text-[13px] font-medium rounded-md transition-all duration-200',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
+      active
+        ? 'text-forest-700 font-bold'
+        : 'text-charcoal-600 hover:text-charcoal-900',
+    ].join(' ');
+
+  const desktopIndicator = (active) => (
+    <span
+      className={[
+        'absolute bottom-0 left-3 right-3 h-[2px] rounded-full',
+        'bg-forest-600 transition-all duration-300 ease-premium',
+        active ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-50',
+      ].join(' ')}
+    />
+  );
+
+  const renderDesktopNav = (item) => {
+    if (item.kind === 'external') {
+      return (
+        <a
+          key={item.id}
+          href={item.url}
+          target={item.openNewTab ? '_blank' : undefined}
+          rel={item.openNewTab ? 'noopener noreferrer' : undefined}
+          className={desktopLinkClass(false)}
+        >
+          {item.label}
+          {desktopIndicator(false)}
+        </a>
+      );
+    }
+    if (item.kind === 'label') {
+      // DROPDOWN parent without a URL — non-interactive until the
+      // dropdown UI phase; never rendered as a dead "#" link.
+      return (
+        <span key={item.id} className={`${desktopLinkClass(false)} cursor-default`} aria-disabled="true">
+          {item.label}
+          {desktopIndicator(false)}
+        </span>
+      );
+    }
+    return (
+      <NavLink
+        key={item.id}
+        to={item.url}
+        end={item.url === '/'}
+        className={({ isActive }) => desktopLinkClass(isActive)}
+      >
+        {({ isActive }) => (
+          <>
+            {item.label}
+            {desktopIndicator(isActive)}
+          </>
+        )}
+      </NavLink>
+    );
+  };
+
+  /* ---- Mobile menu rendering (same visual classes as before).
+     Submenu children render as simple indented rows so nested
+     data is never shown as broken top-level links; the full
+     mobile submenu UX is refined in a later phase. */
+  const mobileLinkClass = (active) =>
+    [
+      'block px-4 py-2.5 rounded-lg text-[15px] font-medium transition-colors duration-200',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
+      active
+        ? 'text-forest-700 bg-forest-50 font-semibold'
+        : 'text-charcoal-600 hover:text-charcoal-900 hover:bg-charcoal-50',
+    ].join(' ');
+
+  const renderMobileNav = (item, index) => {
+    const stagger = isOpen
+      ? { animation: `fadeInUp 0.3s ease-out ${index * 40}ms forwards`, opacity: 0 }
+      : undefined;
+
+    let main;
+    if (item.kind === 'external') {
+      main = (
+        <a
+          key={item.id}
+          href={item.url}
+          target={item.openNewTab ? '_blank' : undefined}
+          rel={item.openNewTab ? 'noopener noreferrer' : undefined}
+          onClick={item.openNewTab ? undefined : closeMenu}
+          className={mobileLinkClass(false)}
+          style={stagger}
+        >
+          {item.label}
+        </a>
+      );
+    } else if (item.kind === 'label') {
+      main = (
+        <span
+          key={item.id}
+          className={`${mobileLinkClass(false)} cursor-default`}
+          aria-disabled="true"
+          style={stagger}
+        >
+          {item.label}
+        </span>
+      );
+    } else {
+      main = (
+        <NavLink
+          key={item.id}
+          to={item.url}
+          end={item.url === '/'}
+          onClick={closeMenu}
+          className={({ isActive }) => mobileLinkClass(isActive)}
+          style={stagger}
+        >
+          {item.label}
+        </NavLink>
+      );
+    }
+
+    const children = item.children.map((child) => (
+      <NavLink
+        key={child.id}
+        to={child.url}
+        end={child.url === '/'}
+        onClick={closeMenu}
+        className={({ isActive }) =>
+          [
+            'block pl-8 pr-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
+            isActive
+              ? 'text-forest-700 bg-forest-50 font-semibold'
+              : 'text-charcoal-500 hover:text-charcoal-900 hover:bg-charcoal-50',
+          ].join(' ')
+        }
+        style={isOpen
+          ? { animation: `fadeInUp 0.3s ease-out ${(index + 0.5) * 40}ms forwards`, opacity: 0 }
+          : undefined}
+      >
+        {child.label}
+      </NavLink>
+    ));
+
+    return [main, ...children];
+  };
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 bg-cream-50/95 backdrop-blur-xl border-b border-charcoal-200/60 shadow-nav"
@@ -134,39 +283,7 @@ function Navbar() {
         {/* ═══════════ ROW 2 — MAIN NAVIGATION (desktop ≥ md) ═══════════ */}
         <div className="hidden md:block bg-white/60 border-b border-charcoal-100/70">
           <div className="container-custom relative">
-            <div className="flex items-center justify-center gap-1 h-11">
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.path}
-                  to={link.path}
-                  end={link.path === '/'}
-                  className={({ isActive }) =>
-                    [
-                      'relative px-3.5 py-2 text-[13px] font-medium rounded-md transition-all duration-200',
-                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
-                      isActive
-                        ? 'text-forest-700 font-bold'
-                        : 'text-charcoal-600 hover:text-charcoal-900',
-                    ].join(' ')
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {link.label}
-                      {/* Active underline indicator */}
-                      <span
-                        className={[
-                          'absolute bottom-0 left-3 right-3 h-[2px] rounded-full',
-                          'bg-forest-600 transition-all duration-300 ease-premium',
-                          isActive
-                            ? 'opacity-100 scale-x-100'
-                            : 'opacity-0 scale-x-50',
-                        ].join(' ')}
-                      />
-                    </>
-                  )}
-                </NavLink>
-              ))}
+            <div className="flex items-center justify-center gap-1 h-11">              {navItems.map(renderDesktopNav)}
 
               {/* Admission Enquiry CTA — pinned to the right edge of the nav row */}
               <Link
@@ -260,26 +377,7 @@ function Navbar() {
         aria-label="Mobile navigation"
       >
         <div className="container-custom py-3 space-y-0.5">
-          {navLinks.map((link, index) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              end={link.path === '/'}
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                [
-                  'block px-4 py-2.5 rounded-lg text-[15px] font-medium transition-colors duration-200',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
-                  isActive
-                    ? 'text-forest-700 bg-forest-50 font-semibold'
-                    : 'text-charcoal-600 hover:text-charcoal-900 hover:bg-charcoal-50',
-                ].join(' ')
-              }
-              style={isOpen ? { animation: `fadeInUp 0.3s ease-out ${index * 40}ms forwards`, opacity: 0 } : undefined}
-            >
-              {link.label}
-            </NavLink>
-          ))}
+          {navItems.flatMap((item, index) => renderMobileNav(item, index))}
           <div className="pt-2 px-1">
             <Link
               to="/admissions"
