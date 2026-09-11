@@ -142,6 +142,9 @@ function Hero() {
   );
 }
 
+
+
+// Delete korte hobe ei section
 /* ═══════════════════════════════════════════
    RECENT NEWS & NOTICES — Ticker
    ═══════════════════════════════════════════ */
@@ -303,6 +306,8 @@ function NewsTicker() {
     </section>
   );
 }
+
+// Delete korte hobe ei section
 
 /* ═══════════════════════════════════════════
    WELCOME SECTION
