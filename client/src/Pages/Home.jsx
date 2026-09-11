@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 import { SectionWrapper, SectionHeader } from "../Components/ui/SectionWrapper";
-import { Card, CardIcon } from "../Components/ui/Card";
+import { Card, CardBadge } from "../Components/ui/Card";
 import Button from "../Components/ui/Button";
 
 /* ═══════════════════════════════════════════
@@ -158,6 +158,9 @@ const newsItems = [
     category: "News",
     title: "[News Title Placeholder]",
     date: "[Date]",
+    image: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
+    excerpt:
+      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
     color: "bg-charcoal-600",
   },
   {
@@ -165,6 +168,9 @@ const newsItems = [
     category: "Event",
     title: "[School Event Placeholder]",
     date: "[Date]",
+    image: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
+    excerpt:
+      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
     color: "bg-gold-600",
   },
   {
@@ -172,6 +178,9 @@ const newsItems = [
     category: "Announcement",
     title: "[Important Announcement]",
     date: "[Date]",
+    image: "/Activity/799202494_1523030196506157_181619563109164848_n.jpg",
+    excerpt:
+      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
     color: "bg-leaf-600",
   },
   {
@@ -179,6 +188,9 @@ const newsItems = [
     category: "Notice",
     title: "[Exam Schedule Placeholder]",
     date: "[Date]",
+    image: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
+    excerpt:
+      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
     color: "bg-forest-600",
   },
 ];
@@ -342,158 +354,77 @@ function WelcomeSection() {
 }
 
 /* ═══════════════════════════════════════════
-   WHY GREEN LEAF — Premium Pillars
+   NEWS CARD — static card for Recent News & Notices
+   Fields render only when present in the data.
    ═══════════════════════════════════════════ */
-const pillars = [
-  {
-    title: "Academic Excellence",
-    description:
-      "Rigorous curriculum designed to build strong foundations and inspire a love for learning.",
-    icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.5}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342"
-        />
-      </svg>
-    ),
-  },
-  {
-    title: "Character & Values",
-    description:
-      "Building integrity, respect, and responsibility in every student through holistic education.",
-    icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.5}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-        />
-      </svg>
-    ),
-  },
-  {
-    title: "Student Activities",
-    description:
-      "Diverse extracurricular programs that develop creativity, leadership, and teamwork.",
-    icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.5}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-        />
-      </svg>
-    ),
-  },
-  {
-    title: "Supportive Environment",
-    description:
-      "A caring community where every student is known, valued, and supported to thrive.",
-    icon: (
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.5}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75a2.25 2.25 0 110-4.5 2.25 2.25 0 010 4.5z"
-        />
-      </svg>
-    ),
-  },
-];
-
-function PillarCard({ pillar, index, featured }) {
-  const number = String(index + 1).padStart(2, "0");
-
+function NewsCard({ article }) {
   return (
-    <div
-      className={`
-        group relative flex flex-col
-        bg-white rounded-2xl overflow-hidden
-        border border-charcoal-100
-        shadow-card
-        transition-all duration-400 ease-premium
-        ${
-          featured
-            ? "shadow-card-hover border-forest-200/60 bg-gradient-to-b from-white to-leaf-50/40"
-            : "hover:shadow-card-hover"
-        }
-        hover:-translate-y-1.5
-      `}
-    >
-      {/* Number */}
-      <div className="px-7 pt-6 pb-0">
-        <span className="text-[11px] font-semibold tracking-[0.2em] text-charcoal-300 uppercase select-none transition-all duration-300 ease-premium group-hover:text-charcoal-400 group-hover:translate-x-0.5">
-          {number}
-        </span>
-      </div>
+    <article className="group h-full">
+      <Card className="h-full" padding={false}>
+        {/* Image — elegant neutral fallback when missing */}
+        {article.image ? (
+          <div className="aspect-[16/10] overflow-hidden relative">
+            <img
+              src={article.image}
+              alt={article.title}
+              className="w-full h-full object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div
+            className="aspect-[16/10] bg-gradient-to-br from-charcoal-50 to-charcoal-100 flex items-center justify-center"
+            aria-hidden="true"
+          >
+            <svg
+              className="w-10 h-10 text-charcoal-300"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5A1.5 1.5 0 003.75 21z"
+              />
+            </svg>
+          </div>
+        )}
 
-      {/* Icon */}
-      <div className="px-7 pt-4 pb-0">
-        <div
-          className={`
-            w-14 h-14 rounded-xl flex items-center justify-center
-            border transition-all duration-300 ease-premium
-            ${
-              featured
-                ? "bg-forest-50 border-forest-100 text-forest-700"
-                : "bg-cream-100/60 border-cream-200/60 text-forest-600"
-            }
-            group-hover:bg-forest-50 group-hover:border-forest-100 group-hover:text-forest-700 group-hover:scale-110
-          `}
-        >
-          {pillar.icon}
+        {/* Content */}
+        <div className="p-5 md:p-6">
+          <div className="flex items-center gap-2.5 mb-3">
+            <CardBadge>{article.category}</CardBadge>
+            <span className="text-caption text-charcoal-400">
+              {article.date}
+            </span>
+          </div>
+          <h3 className="font-heading text-[15px] md:text-h3 font-semibold text-charcoal-900 mb-2 leading-snug group-hover:text-forest-700 transition-colors duration-200">
+            {article.title}
+          </h3>
+          {article.excerpt && (
+            <p className="text-body-sm text-charcoal-500 leading-relaxed line-clamp-2">
+              {article.excerpt}
+            </p>
+          )}
         </div>
-      </div>
-
-      {/* Title */}
-      <h3 className="font-heading text-h3 text-charcoal-900 px-7 pt-5 pb-2">
-        {pillar.title}
-      </h3>
-
-      {/* Description */}
-      <p className="text-body-sm text-charcoal-500 leading-relaxed px-7 pb-6 flex-1">
-        {pillar.description}
-      </p>
-
-      {/* Accent line */}
-      <div className="px-7 pb-6">
-        <div className="pillar-accent-line" />
-      </div>
-    </div>
+      </Card>
+    </article>
   );
 }
 
-function WhyGreenLeaf() {
+function RecentNewsSection() {
   const ref = useScrollReveal();
+  const [showAll, setShowAll] = useState(false);
+
+  /* Default: first 3 items. Expanded: all items, natural height. */
+  const visibleItems = showAll ? newsItems : newsItems.slice(0, 3);
+  const hasMore = newsItems.length > 3;
+
   return (
     <section className="relative bg-cream-50 py-4 md:py-6 lg:py-8 overflow-hidden">
-      {/* Subtle decorative background */}
+      {/* Subtle decorative background — unchanged from Why Green Leaf */}
       <div
         className="absolute inset-0 pointer-events-none overflow-hidden"
         aria-hidden="true"
@@ -514,30 +445,50 @@ function WhyGreenLeaf() {
       <div className="container-custom relative z-10">
         {/* Section Header */}
         <div className="text-center mb-12 md:mb-16">
-          <span className="eyebrow mb-4">Our Pillars</span>
+          <span className="eyebrow mb-4">Recent Updates</span>
           <h2 className="font-heading text-h2 text-charcoal-900 mb-4 mt-3">
-            Why Green Leaf?
+            Recent News &amp; Notices
           </h2>
           <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
-            Four pillars that define the Green Leaf experience and shape our
-            students' futures.
+            Stay updated with the latest news, notices, events, and
+            announcements from Green Leaf.
           </p>
         </div>
 
-        {/* Pillar Grid */}
-        <div
-          ref={ref}
-          className="grid mt-[-40px] sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 stagger-children"
-        >
-          {pillars.map((pillar, index) => (
-            <PillarCard
-              key={pillar.title}
-              pillar={pillar}
-              index={index}
-              featured={index === 0}
-            />
-          ))}
-        </div>
+        {newsItems.length === 0 ? (
+          /* Empty state — no empty grid, keep the section clean */
+          <Card hover={false} className="max-w-xl mx-auto text-center">
+            <p className="text-charcoal-500">
+              No recent news or notices available.
+            </p>
+          </Card>
+        ) : (
+          <>
+            {/* Static news grid — 1 / 2 / 3 cards per row */}
+            <div
+              ref={ref}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 stagger-children"
+            >
+              {visibleItems.map((article) => (
+                <NewsCard key={article.id} article={article} />
+              ))}
+            </div>
+
+            {/* Show All / Show Less — only when more than 3 items */}
+            {hasMore && (
+              <div className="mt-10 text-center">
+                <Button
+                  variant={showAll ? "secondary" : "primary"}
+                  size="md"
+                  onClick={() => setShowAll(!showAll)}
+                  aria-expanded={showAll}
+                >
+                  {showAll ? "Show Less" : "Show All"}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </section>
   );
@@ -1225,7 +1176,7 @@ function Home() {
       <Hero />
       <NewsTicker />
       <WelcomeSection />
-      <WhyGreenLeaf />
+      <RecentNewsSection />
       <StudentLife />
       <AcademicsPreview />
       <VideoSection />
