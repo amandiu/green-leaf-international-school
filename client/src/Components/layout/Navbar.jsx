@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import useNavigation from '../../hooks/useNavigation';
 
@@ -36,9 +36,10 @@ function Navbar() {
   const pauseTicker = useCallback(() => setIsPaused(true), []);
   const resumeTicker = useCallback(() => setIsPaused(false), []);
 
-  /* Close mobile menu on route change */
+  /* Close mobile menu + any desktop dropdown on route change */
   useEffect(() => {
     closeMenu();
+    setOpenDropdownId(null);
   }, [location.pathname, closeMenu]);
 
   /* Detect reduced-motion preference */
@@ -80,13 +81,41 @@ function Navbar() {
     [prefersReduced, isPaused],
   );
 
+  /* ---- Desktop dropdown state (Phase 3.5) ----
+     One open dropdown at a time; driven entirely by the API data
+     (item.children) — nothing about dropdowns is hardcoded. */
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const navRowRef = useRef(null);
+
+  /* Click outside the nav row closes the open dropdown */
+  useEffect(() => {
+    if (!openDropdownId) return undefined;
+    const handlePointerDown = (e) => {
+      if (navRowRef.current && !navRowRef.current.contains(e.target)) {
+        setOpenDropdownId(null);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [openDropdownId]);
+
+  /* Escape closes the open dropdown */
+  useEffect(() => {
+    if (!openDropdownId) return undefined;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setOpenDropdownId(null);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [openDropdownId]);
+
   /* Data-driven navigation (Phase 3.4): one API request per mount,
      fallback keeps the menu shape stable while loading/on error. */
   const { items: navItems } = useNavigation();
 
   /* ---- Desktop Row 2 rendering (same visual classes as before).
-     item.children are kept on each entry for the dedicated
-     dropdown UI phase — they are not yet rendered inline here. */
+     Items WITH children render a chevron trigger + dropdown panel;
+     items without children render exactly as in Phase 3.4. */
   const desktopLinkClass = (active) =>
     [
       'relative px-3.5 py-2 text-[13px] font-medium rounded-md transition-all duration-200',
@@ -106,34 +135,144 @@ function Navbar() {
     />
   );
 
-  const renderDesktopNav = (item) => {
-    if (item.kind === 'external') {
+  const toggleDropdown = (itemId) =>
+    setOpenDropdownId((current) => (current === itemId ? null : itemId));
+
+  /* Section-active: a parent lights up when one of its children
+     is the current route (NavLink handles plain parents itself). */
+  const childRouteIsActive = (item) =>
+    item.children.some((c) => c.kind === 'internal' && c.url === location.pathname);
+
+  /* Premium dropdown panel — own opaque surface (readable over any
+     page background), subtle border + shadow, 200ms fade/slide. */
+  const dropdownPanel = (item) => {
+    const open = openDropdownId === item.id;
+    return (
+      <div
+        id={`nav-dd-${item.id}`}
+        role="menu"
+        aria-label={`${item.label} submenu`}
+        onKeyDown={handlePanelKeyDown}
+        className={[
+          'absolute left-0 top-full z-50 pt-2',
+          prefersReduced ? '' : 'transition-all duration-200 ease-premium',
+          open
+            ? 'visible translate-y-0 opacity-100'
+            : 'invisible -translate-y-1 opacity-0',
+        ].join(' ')}
+      >
+        <div className="min-w-[13rem] max-w-[15rem] rounded-xl border border-charcoal-100 bg-white py-2 shadow-elevated">
+          <ul className="space-y-0.5 px-2">
+            {item.children.map((child) => {
+              if (child.kind === 'external') {
+                return (
+                  <li key={child.id} role="none">
+                    <a
+                      role="menuitem"
+                      href={child.url}
+                      target={child.openNewTab ? '_blank' : undefined}
+                      rel={child.openNewTab ? 'noopener noreferrer' : undefined}
+                      onClick={() => setOpenDropdownId(null)}
+                      className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-charcoal-600 transition-colors duration-150 hover:bg-forest-50 hover:text-forest-700 focus-visible:bg-forest-50 focus-visible:text-forest-700 focus:outline-none"
+                    >
+                      <span className="truncate">{child.label}</span>
+                      <span aria-hidden="true" className="text-[10px] text-charcoal-400">↗</span>
+                    </a>
+                  </li>
+                );
+              }
+              return (
+                <li key={child.id} role="none">
+                  <NavLink
+                    role="menuitem"
+                    to={child.url}
+                    end={child.url === '/'}
+                    onClick={() => setOpenDropdownId(null)}
+                    className={({ isActive }) =>
+                      [
+                        'flex w-full items-center rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 focus:outline-none',
+                        isActive
+                          ? 'bg-forest-50 font-semibold text-forest-700'
+                          : 'text-charcoal-600 hover:bg-forest-50 hover:text-forest-700 focus-visible:bg-forest-50 focus-visible:text-forest-700',
+                      ].join(' ')
+                    }
+                  >
+                    <span className="truncate">{child.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+  /* ArrowDown/ArrowUp move focus between panel items (no trap —
+     Tab still leaves the menu normally). */
+  function handlePanelKeyDown(e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const focusables = e.currentTarget.querySelectorAll('a[href], button:not(:disabled)');
+    if (focusables.length === 0) return;
+    const index = Array.prototype.indexOf.call(focusables, document.activeElement);
+    e.preventDefault();
+    const next = e.key === 'ArrowDown'
+      ? focusables[(index + 1) % focusables.length]
+      : focusables[(index - 1 + focusables.length) % focusables.length];
+    next?.focus();
+  }
+
+  /* Accessible dropdown trigger for parents WITH children.
+     - parent with URL  → the link stays clickable; the chevron is
+       a separate toggle button (no duplicate navigation link)
+     - parent w/o URL   → the whole control is the toggle button
+       (never navigates to "#"/null/undefined) */
+  const dropdownTrigger = (item, active) => {
+    const open = openDropdownId === item.id;
+    const chevron = (
+      <span
+        aria-hidden="true"
+        className={`inline-flex items-center text-current transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+      >
+        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2.5 4.5 L6 8 L9.5 4.5" />
+        </svg>
+      </span>
+    );
+
+    if (item.kind === 'label') {
       return (
-        <a
-          key={item.id}
-          href={item.url}
-          target={item.openNewTab ? '_blank' : undefined}
-          rel={item.openNewTab ? 'noopener noreferrer' : undefined}
-          className={desktopLinkClass(false)}
+        <button
+          type="button"
+          onClick={() => toggleDropdown(item.id)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={`nav-dd-${item.id}`}
+          className={[
+            desktopLinkClass(active),
+            'inline-flex cursor-pointer items-center gap-1.5',
+          ].join(' ')}
         >
           {item.label}
-          {desktopIndicator(false)}
-        </a>
+          {chevron}
+          {desktopIndicator(active)}
+        </button>
       );
     }
-    if (item.kind === 'label') {
-      // DROPDOWN parent without a URL — non-interactive until the
-      // dropdown UI phase; never rendered as a dead "#" link.
-      return (
-        <span key={item.id} className={`${desktopLinkClass(false)} cursor-default`} aria-disabled="true">
-          {item.label}
-          {desktopIndicator(false)}
-        </span>
-      );
-    }
-    return (
+
+    /* Parent has a real URL: keep the NavLink, chevron toggles. */
+    const link = item.kind === 'external' ? (
+      <a
+        href={item.url}
+        target={item.openNewTab ? '_blank' : undefined}
+        rel={item.openNewTab ? 'noopener noreferrer' : undefined}
+        className={desktopLinkClass(active)}
+      >
+        {item.label}
+        {desktopIndicator(active)}
+      </a>
+    ) : (
       <NavLink
-        key={item.id}
         to={item.url}
         end={item.url === '/'}
         className={({ isActive }) => desktopLinkClass(isActive)}
@@ -145,6 +284,78 @@ function Navbar() {
           </>
         )}
       </NavLink>
+    );
+
+    return (
+      <>
+        {link}
+        <button
+          type="button"
+          onClick={() => toggleDropdown(item.id)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={`nav-dd-${item.id}`}
+          aria-label={`${item.label} submenu`}
+          className="-ml-1 inline-flex items-center rounded-md px-1 py-2 text-charcoal-400 transition-colors duration-200 hover:text-charcoal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500"
+        >
+          {chevron}
+        </button>
+      </>
+    );
+  };
+
+  const renderDesktopNav = (item) => {
+    const hasChildren = item.children.length > 0;
+
+    if (!hasChildren) {
+      /* Plain item — identical rendering to Phase 3.4, no arrow. */
+      if (item.kind === 'external') {
+        return (
+          <div key={item.id} className="flex items-center">
+            <a
+              href={item.url}
+              target={item.openNewTab ? '_blank' : undefined}
+              rel={item.openNewTab ? 'noopener noreferrer' : undefined}
+              className={desktopLinkClass(false)}
+            >
+              {item.label}
+              {desktopIndicator(false)}
+            </a>
+          </div>
+        );
+      }
+      return (
+        <div key={item.id} className="flex items-center">
+          <NavLink
+            to={item.url}
+            end={item.url === '/'}
+            className={({ isActive }) => desktopLinkClass(isActive)}
+          >
+            {({ isActive }) => (
+              <>
+                {item.label}
+                {desktopIndicator(isActive)}
+              </>
+            )}
+          </NavLink>
+        </div>
+      );
+    }
+
+    /* Parent with children: hover opens, leaving closes, the
+       chevron toggles for click/keyboard, one open at a time. */
+    const active = item.kind === 'internal' && location.pathname === item.url
+      || childRouteIsActive(item);
+    return (
+      <div
+        key={item.id}
+        className="relative flex items-center"
+        onMouseEnter={() => setOpenDropdownId(item.id)}
+        onMouseLeave={() => setOpenDropdownId((c) => (c === item.id ? null : c))}
+      >
+        {dropdownTrigger(item, active)}
+        {dropdownPanel(item)}
+      </div>
     );
   };
 
@@ -283,7 +494,7 @@ function Navbar() {
         {/* ═══════════ ROW 2 — MAIN NAVIGATION (desktop ≥ md) ═══════════ */}
         <div className="hidden md:block bg-white/60 border-b border-charcoal-100/70">
           <div className="container-custom relative">
-            <div className="flex items-center justify-center gap-1 h-11">              {navItems.map(renderDesktopNav)}
+            <div ref={navRowRef} className="flex items-center justify-center gap-1 h-11">              {navItems.map(renderDesktopNav)}
 
               {/* Admission Enquiry CTA — pinned to the right edge of the nav row */}
               <Link
