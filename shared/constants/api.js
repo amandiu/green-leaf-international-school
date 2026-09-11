@@ -10,6 +10,7 @@ export const API_ROUTES = {
   NEWS: '/api/news',
   VIDEOS: '/api/videos',
   CONTACT: '/api/contact',
+  NAVIGATION: '/api/navigation',
   SETTINGS: '/api/settings',
   UPLOADS: '/api/uploads',
 };

@@ -52,8 +52,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// --------------- API Routes (placeholder) ---------------
-// Routes will be added in Phase 5
+// --------------- API Routes ---------------
+import navigationRoutes from './routes/navigationRoutes.js';
+app.use('/api/navigation', navigationRoutes);
 
 // --------------- 404 Handler ---------------
 

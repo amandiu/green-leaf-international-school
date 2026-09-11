@@ -75,18 +75,47 @@ export async function findChildren(parentId) {
  *   [{ ...item, children: [...] }, ...]
  * Parent items are flattened when they carry no children so the
  * Navbar can render a plain link instead of a dropdown.
+ *
+ * Options:
+ *   onlyActive   — prune items whose ancestor chain is broken or
+ *                  inactive, so an inactive parent hides its whole
+ *                  subtree from the public API (children never leak
+ *                  out as orphaned top-level items).
+ *   dropOrphans  — same hiding for rows whose parent row is missing
+ *                  entirely; without it orphans surface as roots
+ *                  (the safe admin-view behavior).
  */
-export function buildTree(rows) {
+export function buildTree(rows, { onlyActive = false, dropOrphans = false } = {}) {
   const items = rows.map((r) => ({ ...r, children: [] }));
   const byId = new Map(items.map((item) => [item.id, item]));
 
   const roots = [];
   for (const item of items) {
     if (item.parent_id === null || !byId.has(item.parent_id)) {
+      if (dropOrphans && item.parent_id !== null) continue; // hidden branch
       roots.push(item); // main menu (orphans surface as roots, never vanish)
     } else {
       byId.get(item.parent_id).children.push(item);
     }
   }
-  return roots;
+
+  if (!onlyActive) return roots;
+
+  // Keep only items whose every ancestor exists and is active.
+  const isReachable = (item) => {
+    let current = item;
+    const seen = new Set();
+    while (current.parent_id !== null) {
+      if (seen.has(current.id)) return false; // cycle guard
+      seen.add(current.id);
+      const parent = byId.get(current.parent_id);
+      if (!parent || parent.is_active !== true) return false;
+      current = parent;
+    }
+    return true;
+  };
+  const prune = (list) => list
+    .filter((item) => isReachable(item))
+    .map((item) => Object.assign(item, { children: prune(item.children) }));
+  return prune(roots);
 }
