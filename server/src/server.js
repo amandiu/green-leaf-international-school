@@ -56,6 +56,9 @@ app.get('/api/health', (req, res) => {
 import navigationRoutes from './routes/navigationRoutes.js';
 app.use('/api/navigation', navigationRoutes);
 
+import adminNavigationRoutes from './routes/adminNavigationRoutes.js';
+app.use('/api/admin/navigation', adminNavigationRoutes);
+
 // --------------- 404 Handler ---------------
 
 app.use((req, res) => {

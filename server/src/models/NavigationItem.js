@@ -1,10 +1,8 @@
 // ------------------------------------------------------------
-// NavigationItem model (Phase 3.1 — data access foundation)
+// NavigationItem model — data access for navigation_items
 //
-// Read-only data access for the navigation_items table.
-// The public Navbar API and admin write operations belong to
-// later phases; this file only establishes the query layer and
-// the two-level tree shape the dynamic Navbar will consume.
+// Public reads (Phase 3.2) + admin write operations (Phase 3.3).
+// All SQL lives here; business rules live in the service.
 // ------------------------------------------------------------
 
 import pool from '../config/db.js';
@@ -118,4 +116,79 @@ export function buildTree(rows, { onlyActive = false, dropOrphans = false } = {}
     .filter((item) => isReachable(item))
     .map((item) => Object.assign(item, { children: prune(item.children) }));
   return prune(roots);
+}
+
+// ------------------------------------------------------------
+// Write operations (Phase 3.3 — admin management)
+// ------------------------------------------------------------
+
+/** True when the slug is already taken (optionally excluding one id). */
+export async function slugExists(slug, excludeId = null) {
+  const sql = excludeId
+    ? 'SELECT `id` FROM `navigation_items` WHERE `slug` = ? AND `id` <> ? LIMIT 1'
+    : 'SELECT `id` FROM `navigation_items` WHERE `slug` = ? LIMIT 1';
+  const [rows] = await pool.query(sql, excludeId ? [slug, excludeId] : [slug]);
+  return rows.length > 0;
+}
+
+/** Number of direct children of an item. */
+export async function countChildren(id) {
+  const [rows] = await pool.query(
+    'SELECT COUNT(*) AS n FROM `navigation_items` WHERE `parent_id` = ?',
+    [id],
+  );
+  return rows[0].n;
+}
+
+/** Create one navigation item; returns the full created row. */
+export async function createItem({
+  parent_id = null, title, slug, url = null, type, sort_order = 0,
+  is_active = true, open_new_tab = false, icon = null,
+}) {
+  const [result] = await pool.query(
+    `INSERT INTO \`navigation_items\`
+       (\`parent_id\`, \`title\`, \`slug\`, \`url\`, \`type\`,
+        \`sort_order\`, \`is_active\`, \`open_new_tab\`, \`icon\`)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      parent_id, title, slug, url, type, sort_order,
+      is_active ? 1 : 0, open_new_tab ? 1 : 0, icon,
+    ],
+  );
+  return findById(result.insertId);
+}
+
+/** Update an item by id (only provided fields); returns the updated row. */
+export async function updateItem(id, fields) {
+  const allowed = [
+    'parent_id', 'title', 'slug', 'url', 'type', 'sort_order',
+    'is_active', 'open_new_tab', 'icon',
+  ];
+  const sets = [];
+  const values = [];
+  for (const key of allowed) {
+    if (fields[key] !== undefined) {
+      sets.push(`\`${key}\` = ?`);
+      const raw = fields[key];
+      values.push(
+        key === 'is_active' || key === 'open_new_tab' ? (raw ? 1 : 0) : raw,
+      );
+    }
+  }
+  if (sets.length === 0) return findById(id);
+  values.push(id);
+  await pool.query(
+    `UPDATE \`navigation_items\` SET ${sets.join(', ')} WHERE \`id\` = ?`,
+    values,
+  );
+  return findById(id);
+}
+
+/** Delete an item by id. Returns true when a row was removed. */
+export async function deleteItem(id) {
+  const [result] = await pool.query(
+    'DELETE FROM `navigation_items` WHERE `id` = ?',
+    [id],
+  );
+  return result.affectedRows > 0;
 }
