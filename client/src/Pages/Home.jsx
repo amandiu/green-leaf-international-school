@@ -4,6 +4,7 @@ import { useScrollReveal } from "../hooks/useScrollReveal";
 import { SectionWrapper, SectionHeader } from "../Components/ui/SectionWrapper";
 import { Card, CardBadge } from "../Components/ui/Card";
 import Button from "../Components/ui/Button";
+import LeadershipMessage from "../Components/home/LeadershipMessage";
 
 /* ═══════════════════════════════════════════
    HERO — Split Layout with Ken Burns
@@ -1179,6 +1180,8 @@ function Home() {
   return (
     <>
       <Hero />
+      {/* Leadership Message — immediately after Hero (phase requirement) */}
+      <LeadershipMessage />
       <NewsTicker />
       <WelcomeSection />
       <RecentNewsSection />
