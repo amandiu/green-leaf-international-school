@@ -161,14 +161,14 @@ function LeadershipMessage() {
             {leadershipMessages.map((person) => (
               <div className="lm-row" key={person.id}>
 
-                {/* IMAGE CELL — ~40% width */}
+                {/* IMAGE CELL — 30% width, image fills cell (5px inset) */}
                 <div className="lm-cell-image">
                   <div className="lm-portrait">
                     <LeadershipPortrait person={person} />
                   </div>
                 </div>
 
-                {/* MESSAGE CELL — ~60% width */}
+                {/* MESSAGE CELL — 70% width, 10px padding, no inner card */}
                 <LeadershipMessageCell person={person} />
 
               </div>

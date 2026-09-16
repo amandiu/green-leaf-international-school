@@ -1,125 +1,190 @@
 /* ═══════════════════════════════════════════
-   LEADERSHIP MESSAGE STYLES
-   Image cell: 40% width × 200px height (full-bleed)
-   Message cell: ~60% width, matches row height
+   LEADERSHIP MESSAGE — 2×2 TABLE (structure unchanged)
+   ───────────────────────────────────────────
+   Desktop/tablet geometry (exact):
+     • Columns : 30% image | 70% message
+     • Rows    : 250px + 250px (fixed, content never grows them)
+     • Image   : fills its cell, 5px inset, object-fit cover
+     • Message : fills its cell, 10px padding, no inner card,
+                 no max-width constraint
+   Border system (unchanged): outer 4 edges + center vertical
+   divider (at the 30% boundary) + center horizontal divider
+   (at 250px = row 1 bottom / row 2 top).
+   Travelling border lights follow these exact dimensions via
+   the JS-measured --lm-w / --lm-h custom properties.
    ═══════════════════════════════════════════ */
 
-/* Main layout wrapper */
+/* ── Outer premium table shell ──────────────
+   --lm-row-h is the single source of truth for the row
+   height; the horizontal-divider light reuses it so the
+   animation can never drift from the real border.       */
 .lm-ring {
+  --lm-row-h: 250px;      /* one row = exactly this (desktop/tablet) */
+  --lm-border: rgba(26, 87, 40, 0.18);
+  --lm-w: 1200px;         /* fallback until measured by JS */
+  --lm-h: 520px;
+
   position: relative;
   width: 100%;
-  border: 1px solid #e2e8f0; /* Structural border the lights travel along */
-  border-radius: 12px;
-  background-color: #ffffff;
-  overflow: hidden; /* Clips the comets at the edges */
+  border: 1.5px solid var(--lm-border); /* outer top/right/bottom/left */
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 12px 40px -12px rgba(26, 87, 40, 0.12);
+  overflow: hidden; /* clips the lights at the rounded edges */
+  transition: box-shadow 0.4s var(--ease-out);
 }
 
-/* Grid setup: table-like layout with shared interior borders */
+.lm-ring:hover {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 16px 48px -12px rgba(26, 87, 40, 0.16);
+}
+
+/* Grid clips to the ring's inner rounded corners so cell
+   hover backgrounds never poke past the premium radius. */
 .lm-grid {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
+  position: relative;
+  z-index: 2;
+  border-radius: inherit;
+  overflow: hidden;
 }
 
+/* ── ROWS: exactly 2 × 250px (fixed height — content does
+   not grow the rows; long messages wrap inside 250px) ── */
 .lm-row {
   display: flex;
   flex-direction: row;
   align-items: stretch;
   width: 100%;
-  border-bottom: 1px solid #e2e8f0;
+  height: var(--lm-row-h); /* row 1 = 250px, row 2 = 250px */
 }
 
-.lm-row:last-child {
-  border-bottom: none;
+/* Center HORIZONTAL divider — sits exactly at 250px from the
+   top (= row 1 bottom = row 2 top) because row 1 is exactly
+   var(--lm-row-h) tall. */
+.lm-row + .lm-row {
+  border-top: 1.5px solid var(--lm-border);
 }
 
-/* ─── IMAGE CELL (40% Width × 200px Height, full-bleed image) ─── */
+/* ── IMAGE CELL — exactly 30% width, 5px internal padding.
+   The image fills the remaining cell area completely; no
+   large white space around it. ── */
 .lm-cell-image {
-  width: 70%;
-  height: 250px;
+  width: 30%;
+  flex: 0 0 30%;
+  padding: 5px; /* ≈5px spacing between image and cell border */
   display: flex;
-  align-items: stretch;
-  background-color: #fafaf9; /* Subtle contrast background for image block */
-  border-right: 1px solid #e2e8f0;
+  background-color: #fafaf9;
   overflow: hidden;
 }
 
-/* Portrait fills the entire image cell (40% × 200px) */
+/* Portrait wrapper = the image box inside the 5px inset.
+   Subtle radius only — no large frame around the image. */
 .lm-portrait {
   width: 100%;
   height: 100%;
+  border-radius: 0.5rem;
   overflow: hidden;
   background-color: #f1f5f9;
+  box-shadow: 0 2px 8px -2px rgba(26, 87, 40, 0.18);
 }
 
-/* Image scaling mechanics */
+/* Image fills its cell while preserving proportions. */
 .lm-portrait-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;           /* Fills dimensions without stretching or warping */
-  object-position: center top; /*Centers crop targeting heads and shoulders*/
+  object-fit: cover;
+  /* Faces/heads preserved: portraits are taller than this wide
+     cell, so anchor the crop to the top instead of the middle
+     (verified-image exception to object-position: center). */
+  object-position: center top;
   display: block;
+  transition: transform 0.7s var(--ease-out);
 }
 
-/* Monogram/Dignified Fallback Box */
+.lm-portrait:hover .lm-portrait-img {
+  transform: scale(1.02);
+}
+
+/* Monogram fallback — fills the cell, no fixed height. */
 .lm-portrait-fallback {
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  gap: 0.75rem;
+  padding: 1rem;
   text-align: center;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border: 2px dashed #cbd5e1;
+  background: linear-gradient(135deg, #f0f7f0 0%, #dceedd 100%);
 }
 
 .lm-portrait-initial {
-  font-size: 3rem;
-  font-weight: 700;
-  color: #64748b;
-  margin-bottom: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 3.5rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #1a5728;
+  opacity: 0.35;
 }
 
 .lm-portrait-note {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #94a3b8;
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a5728;
+  opacity: 0.45;
 }
 
-/* ─── MESSAGE CELL (~60% Width, compact to match the 200px strip) ─── */
+/* ── MESSAGE CELL — exactly 70% width, 10px internal padding.
+   Content sits directly in the cell (no nested white card)
+   and uses the full cell width. ── */
 .lm-cell-message {
-  width: 100%;
-  min-height: 250px;
-  padding: 1.25rem 2rem;
+  width: 70%;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 10px; /* ≈10px on every side, per spec */
+  /* Center VERTICAL divider — its left edge is exactly at the
+     30% boundary of the table. */
+  border-left: 1.5px solid var(--lm-border);
+  overflow: hidden;
+  transition: background-color 0.4s var(--ease-out);
 }
 
+.lm-row:hover .lm-cell-message {
+  background-color: rgba(240, 247, 240, 0.5);
+}
+
+/* Decorative quotation mark — subtle, behind content */
 .lm-quote-mark {
   position: absolute;
-  top: 0.5rem;
-  left: 1.25rem;
-  font-size: 4.5rem;
+  top: 0.25rem;
+  right: 1rem;
+  font-family: var(--font-heading);
+  font-size: 3.5rem;
   line-height: 1;
-  font-family: serif;
-  color: #e2e8f0;
-  opacity: 0.5;
-  user-select: none;
+  color: rgba(26, 87, 40, 0.07);
   pointer-events: none;
+  user-select: none;
 }
 
+/* Full-width message content — NO max-width constraint:
+   the message uses the whole 70% column naturally. */
 .lm-message-content {
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
-/* Scoped to this component — the site-wide .eyebrow pill style stays intact */
+/* Scoped to this component — the site-wide .eyebrow pill
+   style stays intact */
 .lm-cell-message .eyebrow {
   padding: 0;
   background: transparent;
@@ -136,14 +201,14 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem;
 }
 
 .lm-message-text {
   font-size: 0.9375rem;
   line-height: 1.65;
   color: #475569;
-  margin-bottom: 0.75rem;
+  margin: 0 0 0.75rem;
   font-style: italic;
 }
 
@@ -153,13 +218,13 @@
 
 .lm-signature {
   border-top: 1px solid #f1f5f9;
-  /* padding-top: 0.5rem; */
 }
 
 .lm-name {
   font-size: 1rem;
   font-weight: 600;
   color: #0f172a;
+  margin: 0 0 0.125rem;
 }
 
 .lm-name-pending {
@@ -170,6 +235,7 @@
 .lm-designation {
   font-size: 0.8125rem;
   color: #64748b;
+  margin: 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -177,21 +243,18 @@
    4 lights covering all 6 border paths:
    - outer-a: full perimeter, clockwise
    - outer-b: full perimeter, counter-clockwise
-   - divider-v: center vertical, top↕bottom
-   - divider-h: center horizontal, left↔right
+   - divider-v: center vertical (30% line), top↕bottom
+   - divider-h: center horizontal (250px line), left↔right
    Each light = one 0×0 wrapper point riding the border
    with a round sun-like HEAD + thin tapered TAIL moving
    together as ONE object (translate + rotate only —
    GPU-friendly, never leaves the border line, turns
    corners without teleporting).
    Geometry vars --lm-w/--lm-h are set once by JS
-   (ResizeObserver — no React state, no rAF loop).
+   (ResizeObserver — no React state, no rAF loop); the
+   divider positions derive from the real grid geometry
+   (30% / var(--lm-row-h)) — no hardcoded pixel offsets.
    ═══════════════════════════════════════════ */
-
-.lm-ring {
-  --lm-w: 1200px; /* fallback until measured */
-  --lm-h: 520px;
-}
 
 /* Wrapper = the moving point on the border line */
 .lm-light {
@@ -229,7 +292,8 @@
 /* ── TAIL: very thin, tapered, fading — conic wedge disc
    anchored BEHIND the head in the wrapper's local frame
    (local −x side), so it always trails the direction of
-   travel and swings around corners with the head. ── */
+   travel and swings around corners with the head.
+   Visible streak ≈ 64px (within the 50–70px target). ── */
 .lm-light-tail {
   position: absolute;
   top: -32px;
@@ -315,11 +379,13 @@
   100%       { transform: translate(var(--lm-w), 0px) rotate(180deg); }
 }
 
-/* ── CENTER VERTICAL DIVIDER — rides x = 50%, top ↕ bottom
-   ping-pong; rotation flips at the ends so the tail always
-   trails the current direction. ── */
+/* ── CENTER VERTICAL DIVIDER — rides the real divider at
+   x = 30% of the table (the image/message boundary), top ↕
+   bottom ping-pong; rotation flips at the ends so the tail
+   always trails the current direction. Percentage-based, so
+   it stays glued to the border at any screen width. ── */
 .lm-light-divider-v {
-  left: calc(50% - 0.5px);
+  left: calc(30% + 0.75px); /* centers on the 1.5px divider line */
   animation: lm-slide-y 6s linear infinite;
   animation-delay: -2s;
 }
@@ -332,9 +398,12 @@
   100%       { transform: translate(0px, 0px) rotate(450deg); }
 }
 
-/* ── CENTER HORIZONTAL DIVIDER — rides y = 50%, left ↔ right ── */
+/* ── CENTER HORIZONTAL DIVIDER — rides the real divider at
+   y = 250px (row 1 bottom = row 2 top), left ↔ right. Uses
+   the same --lm-row-h var that sizes the rows, so it can
+   never drift from the actual border. ── */
 .lm-light-divider-h {
-  top: calc(50% - 0.5px);
+  top: calc(var(--lm-row-h) + 0.75px);
   animation: lm-slide-x 7s linear infinite;
   animation-delay: -4.5s;
 }
@@ -364,29 +433,101 @@
   }
 }
 
-/* ─── Responsive Adaptation (Mobile View) ─── */
+/* ── Entrance choreography (ring + per-cell reveal) ── */
+.lm-ring {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out),
+    box-shadow 0.4s var(--ease-out);
+}
+
+.lm-ring.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lm-ring .lm-cell-image {
+  opacity: 0;
+  transform: translateX(-16px);
+}
+
+.lm-ring .lm-cell-message {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+/* Include background-color so hover tint stays smooth;
+   per-property delays keep the entrance stagger off hover. */
+.lm-ring .lm-cell-image,
+.lm-ring .lm-cell-message {
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out),
+    background-color 0.4s var(--ease-out);
+}
+
+.lm-ring.revealed .lm-cell-image,
+.lm-ring.revealed .lm-cell-message {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Row 2 follows row 1 slightly (stagger); hover has no delay */
+.lm-row:nth-child(2) .lm-cell-image,
+.lm-row:nth-child(2) .lm-cell-message {
+  transition-delay: 120ms, 120ms, 0ms;
+}
+
+/* ─── Responsive Adaptation (Mobile) ───
+   Below 768px each row stacks (image above message). The
+   exact 30/70 + 250px geometry is desktop/tablet-only. */
 @media (max-width: 768px) {
   .lm-row {
     flex-direction: column;
+    height: auto; /* stacked rows size naturally */
   }
-  .lm-cell-image,
+
+  .lm-cell-image {
+    width: 100%;
+    flex: none;
+    height: 200px; /* compact stacked image */
+    padding: 5px;  /* same minimal internal spacing */
+  }
+
   .lm-cell-message {
     width: 100%;
-    border-right: none;
+    padding: 10px;
+    /* Vertical divider disappears when stacked — the row
+       separator becomes a horizontal border-top instead. */
+    border-left: none;
+    border-top: 1.5px solid var(--lm-border);
   }
-  .lm-cell-image {
-    height: 200px;
-    min-height: 0;
-  }
-  .lm-cell-message {
-    padding: 1.5rem;
-  }
+
   /* Center vertical divider no longer exists when rows stack —
-     hide its light. The horizontal row separator is not at 50%
-     when stacked, so hide that light too. Outer perimeter
-     lights still follow real borders and stay active. */
+     hide its light. The horizontal row separator is no longer
+     at 250px from the top, so hide that light too. Outer
+     perimeter lights still follow real borders and stay
+     active — never animate a border that does not exist. */
   .lm-light-divider-v,
   .lm-light-divider-h {
     display: none;
+  }
+
+  .lm-quote-mark {
+    font-size: 3rem;
+    right: 0.75rem;
+  }
+}
+
+/* ── Reduced motion: static border, no lights, no entrance ── */
+@media (prefers-reduced-motion: reduce) {
+  .lm-ring,
+  .lm-ring .lm-cell-image,
+  .lm-ring .lm-cell-message {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
