@@ -143,12 +143,6 @@ function Hero() {
   );
 }
 
-
-
-// Delete korte hobe ei section
-/* ═══════════════════════════════════════════
-   RECENT NEWS & NOTICES — Ticker
-   ═══════════════════════════════════════════ */
 const newsItems = [
   {
     id: 1,
@@ -199,165 +193,10 @@ const newsItems = [
   },
 ];
 
-function NewsTicker() {
-  const [isPaused, setIsPaused] = useState(false);
-  const trackRef = useRef(null);
-  const handleMouseEnter = useCallback(() => setIsPaused(true), []);
-  const handleMouseLeave = useCallback(() => setIsPaused(false), []);
-  const [prefersReduced, setPrefersReduced] = useState(false);
-  useEffect(() => {
-    setPrefersReduced(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
-  }, []);
 
-  return (
-    <section className="bg-white border-b border-charcoal-100/60 relative z-20">
-      <div className="container-custom">
-        <div className="flex items-center justify-between py-4 border-b border-charcoal-100/40">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-forest-100 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-forest-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6V7.5z"
-                />
-              </svg>
-            </div>
-            <h2 className="font-heading text-[15px] md:text-h3 font-semibold text-charcoal-900">
-              Recent News &amp; Notices
-            </h2>
-          </div>
-          <Link
-            to="/news"
-            className="text-body-sm font-medium text-forest-600 hover:text-forest-700 transition-colors hidden sm:inline-flex items-center gap-1"
-          >
-            View All
-            <svg
-              className="w-3.5 h-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 7l5 5m0 0l-5 5m5-5H6"
-              />
-            </svg>
-          </Link>
-        </div>
-        <div
-          className="overflow-hidden py-4"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          role="marquee"
-          aria-label="Recent news and notices"
-        >
-          <div
-            ref={trackRef}
-            className="flex gap-4"
-            style={
-              prefersReduced
-                ? { overflowX: "auto", scrollSnapType: "x mandatory" }
-                : {
-                    animation: "newsTicker 30s linear infinite",
-                    animationPlayState: isPaused ? "paused" : "running",
-                    width: "max-content",
-                  }
-            }
-          >
-            {[...newsItems, ...newsItems].map((item, index) => (
-              <Link
-                key={`${item.id}-${index}`}
-                to="/news"
-                className={`flex-shrink-0 w-[280px] md:w-[320px] p-4 rounded-xl border border-charcoal-100/60 bg-cream-50/50 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-premium group ${prefersReduced ? "scroll-snap-start" : ""}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white rounded ${item.color}`}
-                  >
-                    {item.category}
-                  </span>
-                  <span className="text-[11px] text-charcoal-400">
-                    {item.date}
-                  </span>
-                </div>
-                <h3 className="font-heading text-[14px] font-semibold text-charcoal-900 leading-snug group-hover:text-forest-700 transition-colors">
-                  {item.title}
-                </h3>
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div className="sm:hidden text-center pb-3">
-          <span className="text-[10px] text-charcoal-400 uppercase tracking-wider">
-            Scroll →
-          </span>
-        </div>
-      </div>
-    </section>
-  );
-}
 
-// Delete korte hobe ei section
 
-/* ═══════════════════════════════════════════
-   WELCOME SECTION
-   ═══════════════════════════════════════════ */
-function WelcomeSection() {
-  const ref = useScrollReveal();
-  return (
-    <SectionWrapper bg="bg-white" padding="py-section">
-      <div ref={ref} className="reveal">
-        <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <div className="relative">
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden">
-              <img
-                src="/Activity/791934034_1520000023475841_6916330100427667640_n.jpg"
-                alt="Students at Green Leaf International School"
-                className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
-                loading="lazy"
-              />
-            </div>
-            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-leaf-100/60 rounded-2xl -z-10" />
-            <div className="absolute -top-3 -left-3 w-20 h-20 bg-gold-100/40 rounded-xl -z-10" />
-          </div>
-          <div>
-            <span className="eyebrow mb-4">Welcome</span>
-            <h2 className="font-heading text-h2 text-charcoal-900 mb-5 mt-3">
-              Welcome to Green Leaf
-            </h2>
-            <p className="text-charcoal-500 leading-relaxed mb-4">
-              A place where knowledge grows, character develops, and students
-              prepare for the future. Green Leaf International School &amp;
-              College is committed to providing quality education with an
-              international perspective.
-            </p>
-            <p className="text-charcoal-500 leading-relaxed mb-8">
-              We believe every child deserves the opportunity to discover their
-              potential in an environment that values both tradition and
-              innovation.
-            </p>
-            <Link to="/about" className="group">
-              <Button variant="secondary" size="md" showArrow>
-                Discover Our School
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </SectionWrapper>
-  );
-}
+
 
 /* ═══════════════════════════════════════════
    NEWS CARD — static card for Recent News & Notices
@@ -1174,6 +1013,128 @@ function AdmissionsCTA() {
 }
 
 /* ═══════════════════════════════════════════
+   MAP SECTION — Find Us (location + directions)
+   Location data verified on the Contact page
+   ═══════════════════════════════════════════ */
+const GOOGLE_MAPS_EMBED_URL =
+  "https://maps.google.com/maps?q=Green+Leaf+International+School+and+College,+526-A+Rd+12-B,+Adabor,+Dhaka+1207&z=17&output=embed";
+const GOOGLE_MAPS_DIRECTIONS_URL =
+  "https://www.google.com/maps/dir/?api=1&destination=Green+Leaf+International+School+and+College,+526-A+Rd+12-B,+Adabor,+Dhaka+1207";
+const SCHOOL_ADDRESS =
+  "526-A Rd 12-B, Adabor, Dhaka 1207, Bangladesh";
+
+function MapSection() {
+  const ref = useScrollReveal();
+
+  return (
+    <SectionWrapper bg="bg-white" padding="py-section">
+      <div ref={ref} className="reveal">
+        <div className="text-center mb-10 md:mb-12">
+          <span className="eyebrow">Our Location</span>
+          <h2 className="font-heading text-h2 text-charcoal-900 mb-3 mt-3">
+            Find Us on the Map
+          </h2>
+          <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
+            Visit our campus in Adabor, Dhaka — we would love to show you
+            around.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-[1.7fr_1fr] gap-6 lg:gap-8 items-stretch">
+          {/* ── MAP AREA ── */}
+          <div className="relative rounded-2xl overflow-hidden border border-charcoal-100 shadow-card bg-forest-50/40 min-h-[300px] md:min-h-[360px] lg:min-h-[420px]">
+            <iframe
+              src={GOOGLE_MAPS_EMBED_URL}
+              title="Green Leaf International School & College location map"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              className="absolute inset-0 w-full h-full"
+            />
+            {/* Overlay badge — top placement keeps Google map controls clear */}
+            <span className="absolute top-4 left-4 z-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-charcoal-100 shadow-sm text-[11px] font-bold uppercase tracking-[0.14em] text-forest-700">
+              <span className="w-1.5 h-1.5 bg-forest-600 rounded-full" />
+              Our Campus
+            </span>
+          </div>
+
+          {/* ── LOCATION INFORMATION CARD ── */}
+          <div className="bg-cream-50 rounded-2xl border border-charcoal-100/60 shadow-card p-7 md:p-8 flex flex-col">
+            <div className="w-11 h-11 bg-forest-50 rounded-xl flex items-center justify-center text-forest-600 mb-5">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+                />
+              </svg>
+            </div>
+
+            <h3 className="font-heading text-h3 text-charcoal-900 mb-2">
+              Green Leaf International School &amp; College
+            </h3>
+            <p className="text-body-sm text-charcoal-500 leading-relaxed mb-5">
+              Located in the heart of Adabor, easily reachable from across
+              Dhaka.
+            </p>
+
+            <p className="text-body-sm text-charcoal-700 leading-relaxed mb-6">
+              {SCHOOL_ADDRESS}
+            </p>
+
+            <a
+              href={GOOGLE_MAPS_DIRECTIONS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-forest-700 text-white text-body-sm font-semibold transition-all duration-250 ease-premium hover:bg-forest-800 hover:shadow-lg hover:shadow-forest-700/20 active:bg-forest-900 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
+            >
+              Get Directions
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </a>
+
+            <div className="mt-auto pt-6 border-t border-charcoal-100/70">
+              <p className="text-caption text-charcoal-400 uppercase tracking-[0.1em] font-semibold mb-1">
+                Office Hours
+              </p>
+              <p className="text-body-sm text-charcoal-500">
+                Sun — Thu: 8:00 AM — 4:00 PM
+              </p>
+              <p className="text-body-sm text-charcoal-400">Fri — Sat: Closed</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SectionWrapper>
+  );
+}
+
+/* ═══════════════════════════════════════════
    HOME PAGE
    ═══════════════════════════════════════════ */
 function Home() {
@@ -1182,13 +1143,13 @@ function Home() {
       <Hero />
       {/* Leadership Message — immediately after Hero (phase requirement) */}
       <LeadershipMessage />
-      <NewsTicker />
-      <WelcomeSection />
       <RecentNewsSection />
       <StudentLife />
       <AcademicsPreview />
       <VideoSection />
       <AdmissionsCTA />
+      {/* Map — last section, sits right above the footer */}
+      <MapSection />
     </>
   );
 }
