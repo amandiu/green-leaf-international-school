@@ -76,10 +76,28 @@ function About() {
           </div>
         </div>
       </SectionWrapper>
+       {/* Core Values */}
+      <SectionWrapper bg="bg-white" padding="py-section">
+        <SectionHeader
+          badge="Our Values"
+          title="Core Values"
+          description="The principles that guide everything we do at Green Leaf."
+        />
+        <div ref={valuesRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
+          {values.map((value) => (
+            <div key={value.title} className="text-center p-7 rounded-xl bg-cream-50 border border-charcoal-100/60 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-premium">
+              <span className="text-4xl mb-4 block">{value.icon}</span>
+              <h4 className="font-heading text-h3 text-charcoal-900 mb-2">{value.title}</h4>
+              <p className="text-body-sm text-charcoal-500">{value.description}</p>
+            </div>
+          ))}
+        </div>
+      </SectionWrapper>
 
       {/* Vision & Mission */}
+
       <SectionWrapper bg="bg-cream-50" padding="py-section">
-        <div ref={vmRef} className="reveal">
+        <div ref={vmRef} className="reveal py-10">
           <div className="grid md:grid-cols-2 gap-8">
             <Card className="border-l-4 border-l-forest-500 !p-8" hover={false}>
               <div className="flex items-center gap-3 mb-5">
@@ -108,45 +126,8 @@ function About() {
         </div>
       </SectionWrapper>
 
-      {/* Core Values */}
-      <SectionWrapper bg="bg-white" padding="py-section">
-        <SectionHeader
-          badge="Our Values"
-          title="Core Values"
-          description="The principles that guide everything we do at Green Leaf."
-        />
-        <div ref={valuesRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
-          {values.map((value) => (
-            <div key={value.title} className="text-center p-7 rounded-xl bg-cream-50 border border-charcoal-100/60 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-premium">
-              <span className="text-4xl mb-4 block">{value.icon}</span>
-              <h4 className="font-heading text-h3 text-charcoal-900 mb-2">{value.title}</h4>
-              <p className="text-body-sm text-charcoal-500">{value.description}</p>
-            </div>
-          ))}
-        </div>
-      </SectionWrapper>
-
-      {/* Principal Message */}
-      <section className="bg-forest-50 py-section">
-        <div ref={principalRef} className="container-custom reveal">
-          <div className="max-w-3xl mx-auto text-center">
-            <span className="eyebrow mb-4">Leadership</span>
-            <h2 className="font-heading text-h2 text-charcoal-900 mb-8 mt-3">
-              Message from the Principal
-            </h2>
-            <div className="w-20 h-20 bg-white rounded-full mx-auto mb-6 flex items-center justify-center shadow-card overflow-hidden">
-              <img src="/logo.jpg" alt="Green Leaf Logo" className="w-full h-full object-cover" />
-            </div>
-            <blockquote className="text-body-lg text-charcoal-600 italic leading-relaxed mb-6">
-              &ldquo;[Principal&apos;s message placeholder — Replace with the verified message from the school principal.
-              We are committed to providing an education that empowers students to become
-              responsible global citizens.&rdquo;
-            </blockquote>
-            <p className="font-semibold text-charcoal-800 text-body">[Principal Name]</p>
-            <p className="text-body-sm text-charcoal-500">Principal, Green Leaf International School &amp; College</p>
-          </div>
-        </div>
-      </section>
+     
+      
     </>
   );
 }

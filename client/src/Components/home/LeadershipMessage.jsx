@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useScrollReveal } from "../../hooks/useScrollReveal";
 import { SectionHeader } from "../ui/SectionWrapper";
-import { leadershipMessages } from "../../data/leadershipMessages";
+import useLeadershipMessages from "../../hooks/useLeadershipMessages";
 import "./LeadershipMessage.css"; // Imported the style engine managing width & height variables
 
 /* ═══════════════════════════════════════════
@@ -91,11 +91,36 @@ function LeadershipMessage() {
     return () => observer.disconnect();
   }, []);
 
-  /* Reduced motion: hide comets entirely, keep the border system. */
+  /* Reduced motion: hide lights entirely, keep the border system. */
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       ringPauseRef.current?.classList.add("no-light");
     }
+  }, []);
+
+  /* DATA SOURCE (Leadership phase): GET /api/leadership-messages.
+     Rendering structure, classes, and the travelling-light CSS are
+     untouched — only the data source changed. While loading / on
+     error / when empty, the verified local placeholders render. */
+  const { records: leadershipMessages } = useLeadershipMessages();
+
+  /* Feed the exact border geometry to the CSS keyframes via custom
+     properties. Measured once + on resize (ResizeObserver) — pure DOM
+     writes, no React state, no rAF loop, no per-frame updates. */
+  useEffect(() => {
+    const el = ringPauseRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const applySize = () => {
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty("--lm-w", `${Math.round(rect.width)}px`);
+      el.style.setProperty("--lm-h", `${Math.round(rect.height)}px`);
+    };
+
+    applySize();
+    const observer = new ResizeObserver(applySize);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -112,9 +137,25 @@ function LeadershipMessage() {
 
         {/* 2×2 premium table with travelling border light */}
         <div ref={setRingRef} className="lm-ring">
-          {/* Travelling lights — decorative only */}
-          <span className="lm-comet lm-comet-a" aria-hidden="true" />
-          <span className="lm-comet lm-comet-b" aria-hidden="true" />
+          {/* Travelling lights — decorative only (pointer-events: none in CSS) */}
+          {/* Outer perimeter: 2 lights orbiting opposite directions */}
+          <div className="lm-light lm-light-outer-a" aria-hidden="true">
+            <span className="lm-light-tail" />
+            <span className="lm-light-head" />
+          </div>
+          <div className="lm-light lm-light-outer-b" aria-hidden="true">
+            <span className="lm-light-tail" />
+            <span className="lm-light-head" />
+          </div>
+          {/* Center dividers: 1 vertical + 1 horizontal (desktop 2×2 only) */}
+          <div className="lm-light lm-light-divider-v" aria-hidden="true">
+            <span className="lm-light-tail" />
+            <span className="lm-light-head" />
+          </div>
+          <div className="lm-light lm-light-divider-h" aria-hidden="true">
+            <span className="lm-light-tail" />
+            <span className="lm-light-head" />
+          </div>
 
           <div className="lm-grid">
             {leadershipMessages.map((person) => (

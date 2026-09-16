@@ -35,7 +35,7 @@
 
 /* ─── IMAGE CELL (40% Width × 200px Height, full-bleed image) ─── */
 .lm-cell-image {
-  width: 30%;
+  width: 70%;
   height: 250px;
   display: flex;
   align-items: stretch;
@@ -57,7 +57,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;           /* Fills dimensions without stretching or warping */
-  object-position: center top; /* Centers crop targeting heads and shoulders */
+  object-position: center top; /*Centers crop targeting heads and shoulders*/
   display: block;
 }
 
@@ -92,7 +92,7 @@
 
 /* ─── MESSAGE CELL (~60% Width, compact to match the 200px strip) ─── */
 .lm-cell-message {
-  width: 70%;
+  width: 100%;
   min-height: 250px;
   padding: 1.25rem 2rem;
   position: relative;
@@ -172,83 +172,196 @@
   color: #64748b;
 }
 
-/* ─── Travelling Lights (Border Animations) ─── */
-/* Comet A: sweeps the TOP border, left → right */
-.lm-comet {
+/* ═══════════════════════════════════════════
+   TRAVELLING BORDER LIGHTS — animation layer only
+   4 lights covering all 6 border paths:
+   - outer-a: full perimeter, clockwise
+   - outer-b: full perimeter, counter-clockwise
+   - divider-v: center vertical, top↕bottom
+   - divider-h: center horizontal, left↔right
+   Each light = one 0×0 wrapper point riding the border
+   with a round sun-like HEAD + thin tapered TAIL moving
+   together as ONE object (translate + rotate only —
+   GPU-friendly, never leaves the border line, turns
+   corners without teleporting).
+   Geometry vars --lm-w/--lm-h are set once by JS
+   (ResizeObserver — no React state, no rAF loop).
+   ═══════════════════════════════════════════ */
+
+.lm-ring {
+  --lm-w: 1200px; /* fallback until measured */
+  --lm-h: 520px;
+}
+
+/* Wrapper = the moving point on the border line */
+.lm-light {
   position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   pointer-events: none;
   z-index: 10;
+  will-change: transform;
 }
 
-.lm-comet-a {
-  top: 0;
-  left: -120px;
-  width: 120px;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    rgba(21, 128, 61, 0) 0%,
-    rgba(21, 128, 61, 1) 75%,
-    rgba(163, 230, 53, 1) 100%
+/* ── HEAD: round, soft, slightly thick, glowing sun ── */
+.lm-light-head {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fefce8 0%,
+    #ecfccb 30%,
+    #bef264 55%,
+    rgba(101, 163, 13, 0.9) 75%,
+    rgba(101, 163, 13, 0) 100%
   );
-  animation: lm-comet-x 5s linear infinite;
+  box-shadow:
+    0 0 5px 1px rgba(190, 242, 100, 0.6),
+    0 0 14px 3px rgba(132, 204, 22, 0.28);
 }
 
-/* Comet B: sweeps the LEFT border, top → bottom (offset so the two feel independent) */
-.lm-comet-b {
-  top: -120px;
-  left: 0;
-  width: 2px;
-  height: 120px;
-  background: linear-gradient(
-    180deg,
-    rgba(21, 128, 61, 0) 0%,
-    rgba(21, 128, 61, 1) 75%,
-    rgba(163, 230, 53, 1) 100%
+/* ── TAIL: very thin, tapered, fading — conic wedge disc
+   anchored BEHIND the head in the wrapper's local frame
+   (local −x side), so it always trails the direction of
+   travel and swings around corners with the head. ── */
+.lm-light-tail {
+  position: absolute;
+  top: -32px;
+  left: -64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 84deg,
+    rgba(132, 204, 22, 0) 0deg,
+    rgba(163, 230, 53, 0.55) 6deg,
+    rgba(132, 204, 22, 0) 13deg
   );
-  animation: lm-comet-y 5s linear infinite;
-  animation-delay: -2.5s;
+  -webkit-mask-image: radial-gradient(
+    circle,
+    transparent 0%,
+    rgba(0, 0, 0, 0.4) 55%,
+    #000 82%
+  );
+  mask-image: radial-gradient(
+    circle,
+    transparent 0%,
+    rgba(0, 0, 0, 0.4) 55%,
+    #000 82%
+  );
+  filter: blur(0.5px);
 }
 
-@keyframes lm-comet-x {
-  0% {
-    left: -120px;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    left: 100%;
-    opacity: 0;
-  }
+/* ── OUTER LIGHT A — full perimeter, CLOCKWISE from
+   top-left. Keyframes: position moves along one edge at
+   a time (only one translate component changes per edge,
+   so the light never leaves the border), rotation holds
+   during each edge and flips at the corner so the tail
+   always trails behind. ── */
+.lm-light-outer-a {
+  animation: lm-orbit-a 12s linear infinite;
 }
 
-@keyframes lm-comet-y {
-  0% {
-    top: -120px;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    top: 100%;
-    opacity: 0;
-  }
+@keyframes lm-orbit-a {
+  /* TOP edge: left → right (tail trails left) */
+  0%         { transform: translate(0px, 0px) rotate(0deg); }
+  24%        { transform: translate(var(--lm-w), 0px) rotate(0deg); }
+  /* corner top-right: turn down (position unchanged) */
+  25%        { transform: translate(var(--lm-w), 0px) rotate(90deg); }
+  /* RIGHT edge: top → bottom (tail trails up) */
+  49%        { transform: translate(var(--lm-w), var(--lm-h)) rotate(90deg); }
+  /* corner bottom-right: turn left */
+  50%        { transform: translate(var(--lm-w), var(--lm-h)) rotate(180deg); }
+  /* BOTTOM edge: right → left (tail trails right) */
+  74%        { transform: translate(0px, var(--lm-h)) rotate(180deg); }
+  /* corner bottom-left: turn up */
+  75%        { transform: translate(0px, var(--lm-h)) rotate(270deg); }
+  /* LEFT edge: bottom → top (tail trails down) */
+  99%        { transform: translate(0px, 0px) rotate(270deg); }
+  /* loop: settle rotation back to 0deg (= 360deg) */
+  100%       { transform: translate(0px, 0px) rotate(360deg); }
 }
 
-.is-paused .lm-comet {
+/* ── OUTER LIGHT B — full perimeter, COUNTER-CLOCKWISE
+   from top-right. Different direction, duration, phase. ── */
+.lm-light-outer-b {
+  animation: lm-orbit-b 15s linear infinite;
+  animation-delay: -7s;
+}
+
+@keyframes lm-orbit-b {
+  /* TOP edge: right → left (tail trails right) */
+  0%         { transform: translate(var(--lm-w), 0px) rotate(180deg); }
+  24%        { transform: translate(0px, 0px) rotate(180deg); }
+  /* corner top-left: turn down */
+  25%        { transform: translate(0px, 0px) rotate(90deg); }
+  /* LEFT edge: top → bottom (tail trails up) */
+  49%        { transform: translate(0px, var(--lm-h)) rotate(90deg); }
+  /* corner bottom-left: turn right */
+  50%        { transform: translate(0px, var(--lm-h)) rotate(0deg); }
+  /* BOTTOM edge: left → right (tail trails left) */
+  74%        { transform: translate(var(--lm-w), var(--lm-h)) rotate(0deg); }
+  /* corner bottom-right: turn up */
+  75%        { transform: translate(var(--lm-w), var(--lm-h)) rotate(270deg); }
+  /* RIGHT edge: bottom → top (tail trails down) */
+  99%        { transform: translate(var(--lm-w), 0px) rotate(270deg); }
+  /* loop */
+  100%       { transform: translate(var(--lm-w), 0px) rotate(180deg); }
+}
+
+/* ── CENTER VERTICAL DIVIDER — rides x = 50%, top ↕ bottom
+   ping-pong; rotation flips at the ends so the tail always
+   trails the current direction. ── */
+.lm-light-divider-v {
+  left: calc(50% - 0.5px);
+  animation: lm-slide-y 6s linear infinite;
+  animation-delay: -2s;
+}
+
+@keyframes lm-slide-y {
+  0%         { transform: translate(0px, 0px) rotate(90deg); }
+  45%        { transform: translate(0px, var(--lm-h)) rotate(90deg); }
+  50%        { transform: translate(0px, var(--lm-h)) rotate(270deg); }
+  95%        { transform: translate(0px, 0px) rotate(270deg); }
+  100%       { transform: translate(0px, 0px) rotate(450deg); }
+}
+
+/* ── CENTER HORIZONTAL DIVIDER — rides y = 50%, left ↔ right ── */
+.lm-light-divider-h {
+  top: calc(50% - 0.5px);
+  animation: lm-slide-x 7s linear infinite;
+  animation-delay: -4.5s;
+}
+
+@keyframes lm-slide-x {
+  0%         { transform: translate(0px, 0px) rotate(0deg); }
+  45%        { transform: translate(var(--lm-w), 0px) rotate(0deg); }
+  50%        { transform: translate(var(--lm-w), 0px) rotate(180deg); }
+  95%        { transform: translate(0px, 0px) rotate(180deg); }
+  100%       { transform: translate(0px, 0px) rotate(360deg); }
+}
+
+/* Pause lights while the section is off-screen (set by JS) */
+.is-paused .lm-light {
   animation-play-state: paused !important;
 }
-.no-light .lm-comet {
+
+/* Reduced motion (JS class + OS preference): lights off,
+   static border structure remains fully visible */
+.no-light .lm-light {
   display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-light {
+    display: none !important;
+  }
 }
 
 /* ─── Responsive Adaptation (Mobile View) ─── */
@@ -267,5 +380,13 @@
   }
   .lm-cell-message {
     padding: 1.5rem;
+  }
+  /* Center vertical divider no longer exists when rows stack —
+     hide its light. The horizontal row separator is not at 50%
+     when stacked, so hide that light too. Outer perimeter
+     lights still follow real borders and stay active. */
+  .lm-light-divider-v,
+  .lm-light-divider-h {
+    display: none;
   }
 }

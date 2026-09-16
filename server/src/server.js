@@ -59,6 +59,15 @@ app.use('/api/navigation', navigationRoutes);
 import adminNavigationRoutes from './routes/adminNavigationRoutes.js';
 app.use('/api/admin/navigation', adminNavigationRoutes);
 
+import leadershipRoutes from './routes/leadershipRoutes.js';
+app.use('/api/leadership-messages', leadershipRoutes);
+
+import { adminLeadershipRouter } from './routes/leadershipRoutes.js';
+app.use('/api/admin/leadership-messages', adminLeadershipRouter);
+
+import uploadsRoutes from './routes/uploadsRoutes.js';
+app.use('/api/uploads', uploadsRoutes);
+
 // --------------- 404 Handler ---------------
 
 app.use((req, res) => {

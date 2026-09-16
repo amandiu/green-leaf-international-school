@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import useAdminAuth from './hooks/useAdminAuth';
 import AuthGate from './components/AuthGate';
 import NavigationManagement from './pages/NavigationManagement';
+import LeadershipManagement from './pages/LeadershipManagement';
 
 // Placeholder pages — will be built in Phase 6
 const Login = () => (
@@ -67,6 +68,15 @@ const Dashboard = ({ onLogout }) => (
             Manage the website menu and submenus
           </span>
         </Link>
+        <Link
+          to="/leadership"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Leadership Management</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Manage the Principal and Chairman messages
+          </span>
+        </Link>
       </nav>
     </main>
   </div>
@@ -104,6 +114,14 @@ function App() {
         element={
           <AuthGate unlocked={Boolean(token)} onUnlock={unlock} onLock={lock}>
             <NavigationManagement onUnauthorized={lock} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/leadership"
+        element={
+          <AuthGate unlocked={Boolean(token)} onUnlock={unlock} onLock={lock}>
+            <LeadershipManagement onUnauthorized={lock} />
           </AuthGate>
         }
       />
