@@ -1,45 +1,11 @@
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import useAdminAuth from './hooks/useAdminAuth';
 import AuthGate from './components/AuthGate';
+import LoginPage from './pages/LoginPage';
 import NavigationManagement from './pages/NavigationManagement';
 import LeadershipManagement from './pages/LeadershipManagement';
 
-// Placeholder pages — will be built in Phase 6
-const Login = () => (
-  <div className="min-h-screen flex items-center justify-center bg-charcoal-50">
-    <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
-      <h1 className="text-2xl font-bold text-forest-700 text-center mb-2">
-        Green Leaf Admin
-      </h1>
-      <p className="text-charcoal-500 text-center mb-6">Sign in to manage content</p>
-      <form className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-charcoal-700 mb-1">Email</label>
-          <input
-            type="email"
-            className="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-forest-500 focus:border-transparent outline-none"
-            placeholder="admin@greenleaf.edu"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-charcoal-700 mb-1">Password</label>
-          <input
-            type="password"
-            className="w-full px-4 py-2 border border-charcoal-200 rounded-lg focus:ring-2 focus:ring-forest-500 focus:border-transparent outline-none"
-            placeholder="••••••••"
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full py-2.5 bg-forest-600 text-white font-semibold rounded-lg hover:bg-forest-700 transition-colors"
-        >
-          Sign In
-        </button>
-      </form>
-    </div>
-  </div>
-);
-
+// Placeholder page — will be built in Phase 6
 const Dashboard = ({ onLogout }) => (
   <div className="min-h-screen bg-charcoal-50">
     <header className="bg-white border-b border-charcoal-200 px-6 py-4">
@@ -51,7 +17,7 @@ const Dashboard = ({ onLogout }) => (
             onClick={onLogout}
             className="rounded-lg border border-charcoal-200 px-3 py-1.5 text-xs font-medium text-charcoal-600 hover:bg-charcoal-100"
           >
-            Lock admin
+            Logout
           </button>
         )}
       </div>
@@ -82,50 +48,65 @@ const Dashboard = ({ onLogout }) => (
   </div>
 );
 
-const Unauthorized = () => (
-  <div className="min-h-screen flex items-center justify-center bg-charcoal-50">
-    <div className="text-center">
-      <h1 className="text-4xl font-bold text-charcoal-800 mb-4">403</h1>
-      <p className="text-charcoal-500 mb-6">You are not authorized to access this page.</p>
-      <a href="/login" className="text-forest-600 hover:text-forest-700 font-medium">
-        Go to Login
-      </a>
-    </div>
-  </div>
-);
-
 function App() {
-  const { token, unlock, lock } = useAdminAuth();
+  const { user, initializing, login, logout } = useAdminAuth();
+  const location = useLocation();
+
+  const isLoginPage = location.pathname === '/login';
+
+  // Shared lock handler: 401/503 from any page drops the session.
+  const handleUnauthorized = () => {
+    if (user) logout();
+  };
+
+  // While /api/auth/me resolves, render nothing to avoid a
+  // redirect flash on refresh.
+  if (initializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-charcoal-50">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-forest-500 border-t-transparent" aria-label="Loading" />
+      </div>
+    );
+  }
 
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route
+        path="/login"
+        element={<LoginPage user={user} initializing={initializing} onLogin={login} />}
+      />
       <Route
         path="/dashboard"
         element={
-          <AuthGate unlocked={Boolean(token)} onUnlock={unlock} onLock={lock}>
-            <Dashboard onLogout={lock} />
+          <AuthGate initializing={initializing} user={user}>
+            <Dashboard onLogout={logout} />
           </AuthGate>
         }
       />
       <Route
         path="/navigation"
         element={
-          <AuthGate unlocked={Boolean(token)} onUnlock={unlock} onLock={lock}>
-            <NavigationManagement onUnauthorized={lock} />
+          <AuthGate initializing={initializing} user={user}>
+            <NavigationManagement onUnauthorized={handleUnauthorized} />
           </AuthGate>
         }
       />
       <Route
         path="/leadership"
         element={
-          <AuthGate unlocked={Boolean(token)} onUnlock={unlock} onLock={lock}>
-            <LeadershipManagement onUnauthorized={lock} />
+          <AuthGate initializing={initializing} user={user}>
+            <LeadershipManagement onUnauthorized={handleUnauthorized} />
           </AuthGate>
         }
       />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route
+        path="*"
+        element={
+          user
+            ? <Navigate to="/dashboard" replace />
+            : <Navigate to={isLoginPage ? '/login' : '/login'} replace state={{ from: location }} />
+        }
+      />
     </Routes>
   );
 }

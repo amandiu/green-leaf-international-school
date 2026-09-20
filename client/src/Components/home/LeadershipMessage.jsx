@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useScrollReveal } from "../../hooks/useScrollReveal";
 import { SectionHeader } from "../ui/SectionWrapper";
-import useLeadershipMessages from "../../hooks/useLeadershipMessages";
+import useLeadership from "../../hooks/useLeadershipMessages";
 import "./LeadershipMessage.css"; // Imported the style engine managing width & height variables
 
 /* ═══════════════════════════════════════════
@@ -98,11 +98,13 @@ function LeadershipMessage() {
     }
   }, []);
 
-  /* DATA SOURCE (Leadership phase): GET /api/leadership-messages.
-     Rendering structure, classes, and the travelling-light CSS are
-     untouched — only the data source changed. While loading / on
-     error / when empty, the verified local placeholders render. */
-  const { records: leadershipMessages } = useLeadershipMessages();
+  /* DATA SOURCE (Leadership database phase): GET /api/leadership
+     (section copy + active messages). Rendering structure, classes,
+     and the travelling-light CSS are untouched — only the data
+     source changed. While loading / on error / when empty, the
+     verified local placeholders render. When the admin deactivates
+     the section, the whole block is hidden (no broken layout). */
+  const { section, records: leadershipMessages, status } = useLeadership();
 
   /* Feed the exact border geometry to the CSS keyframes via custom
      properties. Measured once + on resize (ResizeObserver) — pure DOM
@@ -123,6 +125,10 @@ function LeadershipMessage() {
     return () => observer.disconnect();
   }, []);
 
+  /* Admin deactivated the section → render nothing (no broken
+     empty layout; the rest of the homepage is unaffected). */
+  if (status === "inactive") return null;
+
   return (
     <section
       id="leadership-message"
@@ -130,9 +136,9 @@ function LeadershipMessage() {
     >
       <div ref={containerRef} className="container-custom reveal">
         <SectionHeader
-          badge="Leadership Message"
-          title="Messages from Our Leadership"
-          description="Words of guidance and inspiration from the leaders of Green Leaf International School & College."
+          badge={section.eyebrow}
+          title={section.title}
+          description={section.description}
         />
 
         {/* 2×2 premium table with travelling border light */}

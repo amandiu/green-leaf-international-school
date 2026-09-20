@@ -22,3 +22,7 @@ export function notFound(message = 'Not found') {
 export function conflict(message) {
   return new HttpError(409, message);
 }
+
+export function unauthorized(message = 'Authentication required') {
+  return new HttpError(401, message);
+}

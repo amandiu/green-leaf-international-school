@@ -313,6 +313,107 @@ async function verify() {
       rows.length > 0 && rows[0].title === 'Home' && rows[rows.length - 1].title === 'Contact',
       'ORDER BY sort_order yields deterministic Home → Contact order',
     );
+
+    // ================= Leadership =================
+
+    // L1. leadership_sections exists
+    const [leadSectionTable] = await conn.query(
+      `SELECT TABLE_NAME, ENGINE, TABLE_COLLATION FROM information_schema.TABLES
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'leadership_sections'`,
+      [DB_NAME],
+    );
+    check(leadSectionTable.length === 1, 'table leadership_sections exists');
+    check(
+      /innoDB/i.test(leadSectionTable[0]?.ENGINE || ''),
+      `leadership_sections engine is InnoDB (got: ${leadSectionTable[0]?.ENGINE})`,
+    );
+
+    // L2. leadership_sections columns
+    const [sectionCols] = await conn.query(
+      `SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_TYPE
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'leadership_sections'
+       ORDER BY ORDINAL_POSITION`,
+      [DB_NAME],
+    );
+    const secMap = new Map(sectionCols.map((c) => [c.COLUMN_NAME, c]));
+    for (const name of [
+      'id', 'eyebrow', 'title', 'description', 'is_active', 'created_at', 'updated_at',
+    ]) {
+      check(secMap.has(name), `leadership_sections column ${name} exists`);
+    }
+    check(
+      secMap.get('is_active')?.COLUMN_DEFAULT !== null
+        && ['1', "b'1'"].includes(String(secMap.get('is_active')?.COLUMN_DEFAULT)),
+      'leadership_sections.is_active defaults to active (1)',
+    );
+
+    // L3. leadership_messages exists with the section-aware shape
+    const [leadMsgTable] = await conn.query(
+      `SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'leadership_messages'`,
+      [DB_NAME],
+    );
+    check(leadMsgTable.length === 1, 'table leadership_messages exists');
+
+    const [msgCols] = await conn.query(
+      `SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_TYPE
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'leadership_messages'
+       ORDER BY ORDINAL_POSITION`,
+      [DB_NAME],
+    );
+    const msgMap = new Map(msgCols.map((c) => [c.COLUMN_NAME, c]));
+    for (const name of [
+      'id', 'section_id', 'role', 'name', 'title', 'message', 'image_url',
+      'image_alt', 'sort_order', 'is_active', 'created_at', 'updated_at',
+    ]) {
+      check(msgMap.has(name), `leadership_messages column ${name} exists`);
+    }
+    check(
+      msgMap.get('role')?.IS_NULLABLE === 'NO',
+      'leadership_messages.role is NOT NULL',
+    );
+
+    // L4. FK leadership_messages.section_id → leadership_sections.id (RESTRICT)
+    const [leadFks] = await conn.query(
+      `SELECT CONSTRAINT_NAME, DELETE_RULE, UPDATE_RULE, REFERENCED_TABLE_NAME
+       FROM information_schema.REFERENTIAL_CONSTRAINTS
+       WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = 'leadership_messages'`,
+      [DB_NAME],
+    );
+    const sectionFk = leadFks.find((f) => f.REFERENCED_TABLE_NAME === 'leadership_sections');
+    check(!!sectionFk, 'FK leadership_messages.section_id → leadership_sections.id exists');
+    check(
+      sectionFk?.DELETE_RULE === 'RESTRICT',
+      `section FK ON DELETE RESTRICT (got: ${sectionFk?.DELETE_RULE})`,
+    );
+
+    // L5. Index for the section+sort query pattern
+    const [leadIdx] = await conn.query(`SHOW INDEX FROM \`leadership_messages\``);
+    check(
+      leadIdx.some(
+        (i) => i.Key_name === 'idx_leadership_messages_section_sort'
+          && i.Column_name === 'section_id' && i.Seq_in_index === 1,
+      ) && leadIdx.some(
+        (i) => i.Key_name === 'idx_leadership_messages_section_sort'
+          && i.Column_name === 'sort_order' && i.Seq_in_index === 2,
+      ),
+      'composite index (section_id, sort_order) exists',
+    );
+
+    // L6. Section seed: exactly one active section row
+    const [sectionRows] = await conn.query(
+      'SELECT id, eyebrow, title, is_active FROM `leadership_sections` ORDER BY id ASC',
+    );
+    check(
+      sectionRows.length >= 1,
+      `at least one leadership section row exists (got: ${sectionRows.length})`,
+    );
+    check(
+      sectionRows.length > 0 && sectionRows[0].is_active === 1,
+      'leadership section is active',
+    );
   } finally {
     await conn.end();
   }

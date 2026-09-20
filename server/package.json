@@ -10,9 +10,12 @@
     "db:migrate": "node src/scripts/dbRun.js migrate",
     "db:seed": "node src/scripts/dbRun.js seed",
     "db:verify": "node src/scripts/dbRun.js verify",
-    "db:setup": "node src/scripts/dbRun.js setup"
+    "db:setup": "node src/scripts/dbRun.js setup",
+    "admin:create": "node src/scripts/createAdmin.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.1",

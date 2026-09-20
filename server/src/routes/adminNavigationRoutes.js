@@ -2,12 +2,12 @@
 // Admin navigation routes (Phase 3.3)
 //
 // Mounted at /api/admin/navigation. EVERY route requires the
-// admin credentials (see middleware/adminAuth.js). This module
+// admin session (see middleware/sessionAuth.js). This module
 // does not touch the public GET /api/navigation contract.
 // ------------------------------------------------------------
 
 import { Router } from 'express';
-import adminAuth from '../middleware/adminAuth.js';
+import adminAuth from '../middleware/sessionAuth.js';
 import {
   listNavigation,
   createNavigation,

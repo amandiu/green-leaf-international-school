@@ -13,7 +13,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 /** Absolute directory where leadership portraits are stored. */
 const ROOT = resolve(process.cwd(), 'src', 'uploads', 'leadership');
@@ -118,7 +118,7 @@ export function resolveImagePath(imageUrl) {
   }
   const target = join(ROOT, filename);
   // Defense in depth: the resolved path must stay inside ROOT.
-  if (!resolve(target).startsWith(ROOT + sep()) && resolve(target) !== ROOT) {
+  if (!resolve(target).startsWith(ROOT + sep) && resolve(target) !== ROOT) {
     return null;
   }
   return target;

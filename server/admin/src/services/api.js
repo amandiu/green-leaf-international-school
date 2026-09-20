@@ -1,47 +1,28 @@
 // ------------------------------------------------------------
-// Admin API client
+// Admin API client (Admin auth phase)
 //
-// Single fetch wrapper for the admin app. Attaches the stored
-// admin token as a Bearer credential and normalizes errors into
-// { status, message } so pages can show safe messages.
+// Cookie-session mode: the browser automatically attaches the
+// HttpOnly session cookie issued by POST /api/auth/login, so no
+// token is stored or sent manually. `credentials: 'include'`
+// keeps the cookie flowing through the Vite proxy (5174 → 5000).
+//
+// Errors are normalized into { status, message } so pages can
+// react (401/503 → lock the UI) and show safe messages.
 // ------------------------------------------------------------
 
-const TOKEN_KEY = 'greenleaf_admin_token';
-
-export function getStoredToken() {
-  try {
-    return window.sessionStorage.getItem(TOKEN_KEY) || '';
-  } catch {
-    return '';
-  }
-}
-
-export function storeToken(token) {
-  try {
-    window.sessionStorage.setItem(TOKEN_KEY, token);
-  } catch {
-    /* storage unavailable — session-only unlock won't persist */
-  }
-}
-
-export function clearToken() {
-  try {
-    window.sessionStorage.removeItem(TOKEN_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
+/**
+ * Fetch wrapper for all admin API calls.
+ * Resolves with the parsed JSON payload; rejects { status, message }.
+ */
 async function request(path, { method = 'GET', body, headers: extraHeaders } = {}) {
   const headers = { 'Content-Type': 'application/json', ...extraHeaders };
-  const token = getStoredToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   let response;
   try {
     response = await fetch(path, {
       method,
       headers,
+      credentials: 'include', // send the HttpOnly session cookie
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

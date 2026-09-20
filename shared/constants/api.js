@@ -11,6 +11,7 @@ export const API_ROUTES = {
   VIDEOS: '/api/videos',
   CONTACT: '/api/contact',
   NAVIGATION: '/api/navigation',
+  LEADERSHIP: '/api/leadership',
   LEADERSHIP_MESSAGES: '/api/leadership-messages',
   SETTINGS: '/api/settings',
   UPLOADS: '/api/uploads',

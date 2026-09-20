@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS `leadership_messages` (
   `title`      VARCHAR(160)  NULL DEFAULT NULL COMMENT 'Optional message heading, e.g. "Message from the Principal"',
   `message`    TEXT          NULL COMMENT 'Official message content; NULL = pending verified content',
   `image_url`  VARCHAR(255)  NULL DEFAULT NULL COMMENT 'Public-safe relative path under /api/uploads (never a server filesystem path)',
+  `image_alt`  VARCHAR(255)  NULL DEFAULT NULL COMMENT 'Admin-provided alt text for the portrait (accessibility)',
   `sort_order` INT           NOT NULL DEFAULT 0 COMMENT 'Public display order (ORDER BY sort_order ASC)',
   `is_active`  TINYINT(1)    NOT NULL DEFAULT 1 COMMENT 'Admin can disable without deleting',
   `created_at` TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,

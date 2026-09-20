@@ -9,10 +9,16 @@
 
 import {
   getPublicLeadershipMessages,
+  getPublicLeadership as getPublicLeadershipFromService,
   getAdminLeadershipMessages,
+  getLeadershipMessage,
   createLeadershipMessage,
   updateLeadershipMessage,
   deleteLeadershipMessage,
+  setLeadershipMessageStatus,
+  reorderLeadershipMessages,
+  getLeadershipSection,
+  updateLeadershipSection,
 } from '../services/leadershipService.js';
 import { saveLeadershipImage } from '../utils/imageUpload.js';
 import { HttpError } from '../utils/errors.js';
@@ -51,6 +57,25 @@ export async function getLeadershipMessages(_req, res) {
   }
 }
 
+/**
+ * GET /api/leadership
+ * Combined public payload: section copy + active messages.
+ * An inactive section returns { section: null, messages: [] }
+ * so the homepage hides the whole block gracefully.
+ */
+export async function getPublicLeadership(_req, res) {
+  try {
+    const data = await getPublicLeadershipFromService();
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error('Failed to load leadership content:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load leadership content',
+    });
+  }
+}
+
 // ============ ADMIN ============
 
 /** GET /api/admin/leadership-messages — all records (incl. inactive). */
@@ -62,6 +87,23 @@ export async function listLeadershipMessages(_req, res) {
     return sendServiceError(res, err, {
       log: 'Admin: failed to list leadership messages:',
       message: 'Failed to load leadership messages',
+    });
+  }
+}
+
+/** GET /api/admin/leadership-messages/:id — single record fetch. */
+export async function getOneLeadership(req, res) {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Invalid leadership message id' });
+    }
+    const item = await getLeadershipMessage(id);
+    res.status(200).json({ success: true, data: item });
+  } catch (err) {
+    return sendServiceError(res, err, {
+      log: 'Admin: failed to load leadership message:',
+      message: 'Failed to load leadership message',
     });
   }
 }
@@ -109,6 +151,68 @@ export async function deleteLeadership(req, res) {
     return sendServiceError(res, err, {
       log: 'Admin: failed to delete leadership message:',
       message: 'Failed to delete leadership message',
+    });
+  }
+}
+
+/**
+ * PATCH /api/admin/leadership-messages/:id/status
+ * Activate/deactivate a record without touching other fields.
+ */
+export async function setLeadershipStatus(req, res) {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Invalid leadership message id' });
+    }
+    const item = await setLeadershipMessageStatus(id, req.body);
+    res.status(200).json({ success: true, data: item });
+  } catch (err) {
+    return sendServiceError(res, err, {
+      log: 'Admin: failed to set leadership status:',
+      message: 'Failed to update leadership status',
+    });
+  }
+}
+
+/**
+ * PATCH /api/admin/leadership-messages/reorder
+ * Body: { order: [ { id, sort_order }, ... ] } — applied atomically.
+ */
+export async function reorderLeadership(req, res) {
+  try {
+    const data = await reorderLeadershipMessages(req.body);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    return sendServiceError(res, err, {
+      log: 'Admin: failed to reorder leadership messages:',
+      message: 'Failed to reorder leadership messages',
+    });
+  }
+}
+
+/** GET /api/admin/leadership-section — section settings (admin view). */
+export async function getLeadershipSectionSettings(_req, res) {
+  try {
+    const data = await getLeadershipSection();
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    return sendServiceError(res, err, {
+      log: 'Admin: failed to load leadership section:',
+      message: 'Failed to load leadership section',
+    });
+  }
+}
+
+/** PUT /api/admin/leadership-section — update section settings. */
+export async function updateLeadershipSectionSettings(req, res) {
+  try {
+    const data = await updateLeadershipSection(req.body);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    return sendServiceError(res, err, {
+      log: 'Admin: failed to update leadership section:',
+      message: 'Failed to update leadership section',
     });
   }
 }
