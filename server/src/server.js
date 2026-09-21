@@ -122,10 +122,36 @@ app.use((err, req, res, _next) => {
 
 // --------------- Start Server ---------------
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🌿 Green Leaf API server running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
+});
+
+// Fail loudly and helpfully when the port is occupied — never
+// drift to another port and never crash with a bare stack trace.
+// If the occupant is this same API, tell the developer the backend
+// is already running instead of looking broken.
+server.on('error', async (err) => {
+  if (err?.code === 'EADDRINUSE') {
+    console.error(`\n✖ Port ${PORT} is already in use — the API port is fixed and will not drift to another port.`);
+    try {
+      const res = await fetch(`http://127.0.0.1:${PORT}/api/health`);
+      const body = await res.json().catch(() => null);
+      if (res.ok && body?.message === 'Green Leaf API is running') {
+        console.error('  ✔ The Green Leaf API is ALREADY RUNNING on this port — the backend is available, not broken.');
+        console.error(`    Health check: http://localhost:${PORT}/api/health`);
+        console.error('    To restart it, stop the existing instance first (Ctrl+C in its terminal).');
+      } else {
+        console.error(`  Another (non-Green-Leaf) process is occupying port ${PORT}. Free the port, then start the API again.`);
+      }
+    } catch {
+      console.error(`  The process on port ${PORT} is not responding as this API. Free the port, then start the API again.`);
+    }
+    process.exit(1);
+  }
+  console.error('Server failed to start:', err);
+  process.exit(1);
 });
 
 export default app;

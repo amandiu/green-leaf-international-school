@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "nodemon --exitcrash src/server.js",
     "start": "node src/server.js",
     "lint": "eslint . --ext js --report-unused-disable-directives --max-warnings 0",
     "db:migrate": "node src/scripts/dbRun.js migrate",

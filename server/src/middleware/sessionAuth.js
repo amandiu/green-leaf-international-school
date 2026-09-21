@@ -28,7 +28,13 @@ export function attachSessionUser(req, _res, next) {
   const token = req.cookies?.[SESSION_COOKIE_NAME];
   if (token) {
     const payload = verifySessionToken(token);
-    if (payload) req.adminUser = payload; // { sub→id, email, name, exp }
+    if (payload) {
+      // The signed token stores the user id JWT-style as `sub`;
+      // expose it as `id` so controllers can use req.adminUser.id
+      // (without this mapping /api/auth/me can never resolve the
+      // live profile and every refresh drops the session UI).
+      req.adminUser = { ...payload, id: payload.sub };
+    }
   }
   next();
 }
