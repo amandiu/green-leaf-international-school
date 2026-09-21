@@ -1,5 +1,6 @@
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
+import { siteConfig } from '../../../shared/config/siteConfig';
 
 const facilities = [
   { title: 'Classrooms', description: 'Spacious, well-lit classrooms equipped with modern teaching aids.', icon: '🏫' },
@@ -14,13 +15,13 @@ const facilities = [
 
 // Real activity images for gallery
 const galleryImages = [
-  { src: '/Activity/622795504_1331640232311822_8337787275400960079_n.jpg', alt: 'School event at Green Leaf' },
+  { src: '/Activity/622795504_1331640232311822_8337787275400960079_n.jpg', alt: `School event at ${siteConfig.identity.shortName}` },
   { src: '/Activity/625315684_1336575921818253_5748372564670646089_n.jpg', alt: 'Student activities' },
   { src: '/Activity/626858006_1336049948537517_773566875872290209_n.jpg', alt: 'Campus life' },
   { src: '/Activity/733964172_1461551332654044_7584369769358467486_n.jpg', alt: 'School celebration' },
-  { src: '/Activity/791960429_1520000160142494_7137261715921016786_n.jpg', alt: 'Student life at Green Leaf' },
+  { src: '/Activity/791960429_1520000160142494_7137261715921016786_n.jpg', alt: `Student life at ${siteConfig.identity.shortName}` },
   { src: '/Activity/793029087_1520000093475834_2743533360760256657_n.jpg', alt: 'School activities' },
-  { src: '/Activity/798261974_1522758946533282_4611489181890379367_n.jpg', alt: 'Green Leaf campus' },
+  { src: '/Activity/798261974_1522758946533282_4611489181890379367_n.jpg', alt: `${siteConfig.identity.shortName} campus` },
   { src: '/Activity/799202517_1523030029839507_1707174830228802214_n.jpg', alt: 'School environment' },
 ];
 
@@ -30,7 +31,7 @@ function CampusHero() {
       <div className="absolute inset-0">
         <img
           src="/Activity/724738811_1449859873823190_4267762226830169408_n.jpg"
-          alt="Green Leaf International School campus"
+          alt={`${siteConfig.identity.name} campus`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/50 to-charcoal-900/30" />
@@ -66,7 +67,7 @@ function Campus() {
               <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                 <img
                   src="/Hero Section/hero 2.jpg"
-                  alt="Green Leaf International School campus overview"
+                  alt={`${siteConfig.identity.name} campus overview`}
                   className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                   loading="lazy"
                 />
@@ -117,7 +118,7 @@ function Campus() {
         <SectionHeader
           badge="Gallery"
           title="Campus Gallery"
-          description="A glimpse into life at Green Leaf International School & College."
+          description={`A glimpse into life at ${siteConfig.identity.name}.`}
         />
         <div ref={galleryRef} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 stagger-children">
           {galleryImages.map((img, i) => (

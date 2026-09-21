@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { siteConfig } from '../../shared/config/siteConfig.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -60,7 +61,7 @@ app.use('/api/', limiter);
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Green Leaf API is running',
+    message: siteConfig.api.healthMessage,
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
@@ -123,7 +124,7 @@ app.use((err, req, res, _next) => {
 // --------------- Start Server ---------------
 
 const server = app.listen(PORT, () => {
-  console.log(`🌿 Green Leaf API server running on port ${PORT}`);
+  console.log(`🌿 ${siteConfig.identity.name} — API server running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
 });
@@ -138,12 +139,12 @@ server.on('error', async (err) => {
     try {
       const res = await fetch(`http://127.0.0.1:${PORT}/api/health`);
       const body = await res.json().catch(() => null);
-      if (res.ok && body?.message === 'Green Leaf API is running') {
-        console.error('  ✔ The Green Leaf API is ALREADY RUNNING on this port — the backend is available, not broken.');
+      if (res.ok && body?.message === siteConfig.api.healthMessage) {
+        console.error(`  ✔ The ${siteConfig.identity.name} API is ALREADY RUNNING on this port — the backend is available, not broken.`);
         console.error(`    Health check: http://localhost:${PORT}/api/health`);
         console.error('    To restart it, stop the existing instance first (Ctrl+C in its terminal).');
       } else {
-        console.error(`  Another (non-Green-Leaf) process is occupying port ${PORT}. Free the port, then start the API again.`);
+        console.error(`  Another (non-${siteConfig.identity.shortName}) process is occupying port ${PORT}. Free the port, then start the API again.`);
       }
     } catch {
       console.error(`  The process on port ${PORT} is not responding as this API. Free the port, then start the API again.`);

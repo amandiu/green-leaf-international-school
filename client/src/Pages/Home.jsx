@@ -4,7 +4,17 @@ import { useScrollReveal } from "../hooks/useScrollReveal";
 import { SectionWrapper, SectionHeader } from "../Components/ui/SectionWrapper";
 import { Card, CardBadge } from "../Components/ui/Card";
 import Button from "../Components/ui/Button";
+import BrandBlock from "../Components/ui/BrandBlock";
 import LeadershipMessage from "../Components/home/LeadershipMessage";
+import {
+  siteConfig,
+  getMapsEmbedUrl,
+  getMapsDirectionsUrl,
+} from "../../../shared/config/siteConfig";
+
+const GOOGLE_MAPS_EMBED_URL = getMapsEmbedUrl();
+const GOOGLE_MAPS_DIRECTIONS_URL = getMapsDirectionsUrl();
+const SCHOOL_ADDRESS = siteConfig.location.address;
 
 /* ═══════════════════════════════════════════
    HERO — Split Layout with Ken Burns
@@ -12,15 +22,15 @@ import LeadershipMessage from "../Components/home/LeadershipMessage";
 const heroImages = [
   {
     src: "/Hero Section/hero 1.jpg",
-    alt: "Green Leaf International School & College Campus",
+    alt: `${siteConfig.identity.name} Campus`,
   },
   {
     src: "/Hero Section/hero 2.jpg",
-    alt: "Green Leaf International School Students",
+    alt: `${siteConfig.identity.shortName} Students`,
   },
   {
     src: "/Hero Section/hero 3.jpg",
-    alt: "Green Leaf International School Activities",
+    alt: `${siteConfig.identity.shortName} Activities`,
   },
 ];
 
@@ -59,19 +69,8 @@ function Hero() {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-3 mb-5 opacity-0 animate-[fadeInUp_0.5s_ease-out_0.1s_forwards]">
-              <img
-                src="/logo.jpg"
-                alt="Green Leaf International School & College Logo"
-                className="w-12 h-12 md:w-14 md:h-14 rounded-xl object-cover shadow-md"
-              />
-              <div>
-                <span className="block text-[11px] md:text-[12px] font-bold text-white/90 uppercase tracking-[0.1em] leading-tight">
-                  Green Leaf
-                </span>
-                <span className="block text-[9px] md:text-[10px] text-white/60 uppercase tracking-[0.12em] font-medium">
-                  International School &amp; College
-                </span>
-              </div>
+              {/* Brand (logo + wordmark) from the central site config */}
+              <BrandBlock size="lg" theme="dark" />
             </div>
             <h1 className="font-heading text-[2.25rem] md:text-[2.75rem] lg:text-[3.25rem] leading-[1.1] text-white mb-4 opacity-0 animate-[fadeInUp_0.6s_ease-out_0.2s_forwards]">
               Excellence in <br className="hidden sm:block" />
@@ -293,11 +292,10 @@ function RecentNewsSection() {
           <span className="eyebrow mb-4">Recent Updates</span>
           <h2 className="font-heading text-h2 text-charcoal-900 mb-4 mt-3">
             Recent News &amp; Notices
-          </h2>
-          <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
-            Stay updated with the latest news, notices, events, and
-            announcements from Green Leaf.
-          </p>
+          </h2>            <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
+              Stay updated with the latest news, notices, events, and
+              announcements from {siteConfig.identity.shortName}.
+            </p>
         </div>
 
         {newsItems.length === 0 ? (
@@ -349,7 +347,7 @@ const lifeImages = [
   },
   {
     src: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
-    alt: "School event at Green Leaf",
+    alt: `School event at ${siteConfig.identity.shortName}`,
   },
   {
     src: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
@@ -357,7 +355,7 @@ const lifeImages = [
   },
   {
     src: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
-    alt: "Student life at Green Leaf",
+    alt: `Student life at ${siteConfig.identity.shortName}`,
   },
   {
     src: "/Activity/799202494_1523030196506157_181619563109164848_n.jpg",
@@ -371,7 +369,7 @@ function StudentLife() {
     <SectionWrapper bg="bg-white" padding="py-section">
       <SectionHeader
         badge="School Life"
-        title="Life at Green Leaf"
+        title={`Life at ${siteConfig.identity.shortName}`}
         description="A vibrant community where students learn, grow, and create lasting memories."
       />
       <div
@@ -429,7 +427,7 @@ function AcademicsPreview() {
             <div className="aspect-[4/3] rounded-2xl overflow-hidden">
               <img
                 src="/Activity/724138882_1448846993924478_5789741995812830014_n.jpg"
-                alt="Students in academic setting at Green Leaf"
+                alt={`Students in academic setting at ${siteConfig.identity.name}`}
                 className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                 loading="lazy"
               />
@@ -447,16 +445,15 @@ function AcademicsPreview() {
    ═══════════════════════════════════════════ */
 
 const CAROUSEL_INTERVAL = 6000;
-const SLIDE_CHANNEL_URL =
-  "https://www.youtube.com/@greenleafinternationalscho29/videos";
+const SLIDE_CHANNEL_URL = siteConfig.social.youtube;
 
 const videoShowcaseData = [
   {
     id: 1,
     eyebrow: "Campus Life",
-    title: "Life at Green Leaf",
+    title: `Life at ${siteConfig.identity.shortName}`,
     description:
-      "Experience the vibrant campus life and activities at Green Leaf International School & College.",
+      `Experience the vibrant campus life and activities at ${siteConfig.identity.name}.`,
     videoUrl: SLIDE_CHANNEL_URL,
     thumbnail: "/Activity/796941384_1521802823295561_1039006011241713451_n.jpg",
     buttonText: "Watch Video",
@@ -467,7 +464,7 @@ const videoShowcaseData = [
     eyebrow: "Student Activities",
     title: "Learning Beyond the Classroom",
     description:
-      "Discover learning experiences, activities, and memorable moments from Green Leaf International School & College.",
+      `Discover learning experiences, activities, and memorable moments from ${siteConfig.identity.name}.`,
     videoUrl: SLIDE_CHANNEL_URL,
     thumbnail: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
     buttonText: "Watch Video",
@@ -478,7 +475,7 @@ const videoShowcaseData = [
     eyebrow: "School Events",
     title: "Moments That Matter",
     description:
-      "Explore events and special moments from our school community at Green Leaf International School & College.",
+      `Explore events and special moments from our school community at ${siteConfig.identity.name}.`,
     videoUrl: SLIDE_CHANNEL_URL,
     thumbnail: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
     buttonText: "Watch Video",
@@ -489,7 +486,7 @@ const videoShowcaseData = [
     eyebrow: "Student Life",
     title: "Growing Together",
     description:
-      "See how our students grow, learn, and thrive in a nurturing educational environment at Green Leaf.",
+      `See how our students grow, learn, and thrive in a nurturing educational environment at ${siteConfig.identity.shortName}.`,
     videoUrl: SLIDE_CHANNEL_URL,
     thumbnail: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
     buttonText: "Watch Video",
@@ -500,7 +497,7 @@ const videoShowcaseData = [
     eyebrow: "Our Community",
     title: "School Spirit in Action",
     description:
-      "Witness the spirit, dedication, and joy that define the Green Leaf International School & College experience.",
+      `Witness the spirit, dedication, and joy that define the ${siteConfig.identity.name} experience.`,
     videoUrl: SLIDE_CHANNEL_URL,
     thumbnail: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
     buttonText: "Watch Video",
@@ -795,7 +792,7 @@ function VideoSection() {
                 <div className="aspect-video relative bg-charcoal-800">
                   <img
                     src={activeVideo.thumbnail}
-                    alt={`${activeVideo.title} — Green Leaf International School`}
+                    alt={`${activeVideo.title} — ${siteConfig.identity.name}`}
                     className="w-full h-full object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.03]"
                   />
 
@@ -975,7 +972,7 @@ function AdmissionsCTA() {
           Give Your Child a Place to Grow
         </h2>
         <p className="text-body-lg text-white/60 mb-8 max-w-xl mx-auto">
-          Join the Green Leaf community. Admissions are open for the upcoming
+          Join the {siteConfig.identity.shortName} community. Admissions are open for the upcoming
           academic year.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
@@ -1014,14 +1011,9 @@ function AdmissionsCTA() {
 
 /* ═══════════════════════════════════════════
    MAP SECTION — Find Us (location + directions)
-   Location data verified on the Contact page
+   Maps URLs + address come from the central
+   site config (declared at the top of this file).
    ═══════════════════════════════════════════ */
-const GOOGLE_MAPS_EMBED_URL =
-  "https://maps.google.com/maps?q=Green+Leaf+International+School+and+College,+526-A+Rd+12-B,+Adabor,+Dhaka+1207&z=17&output=embed";
-const GOOGLE_MAPS_DIRECTIONS_URL =
-  "https://www.google.com/maps/dir/?api=1&destination=Green+Leaf+International+School+and+College,+526-A+Rd+12-B,+Adabor,+Dhaka+1207";
-const SCHOOL_ADDRESS =
-  "526-A Rd 12-B, Adabor, Dhaka 1207, Bangladesh";
 
 function MapSection() {
   const ref = useScrollReveal();
@@ -1045,7 +1037,7 @@ function MapSection() {
           <div className="relative rounded-2xl overflow-hidden border border-charcoal-100 shadow-card bg-forest-50/40 min-h-[300px] md:min-h-[360px] lg:min-h-[420px]">
             <iframe
               src={GOOGLE_MAPS_EMBED_URL}
-              title="Green Leaf International School & College location map"
+              title={`${siteConfig.identity.name} location map`}
               width="100%"
               height="100%"
               style={{ border: 0 }}
@@ -1085,7 +1077,7 @@ function MapSection() {
             </div>
 
             <h3 className="font-heading text-h3 text-charcoal-900 mb-2">
-              Green Leaf International School &amp; College
+              {siteConfig.identity.name}
             </h3>
             <p className="text-body-sm text-charcoal-500 leading-relaxed mb-5">
               Located in the heart of Adabor, easily reachable from across

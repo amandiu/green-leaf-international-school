@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import useNavigation from '../../hooks/useNavigation';
+import { siteConfig } from '../../../../shared/config/siteConfig';
+import BrandBlock from '../ui/BrandBlock';
 
 /* ═══════════════════════════════════════════
    NAV LINKS — now served from the MySQL navigation API
@@ -456,22 +458,10 @@ function Navbar() {
             <Link
               to="/"
               className="flex items-center gap-2.5 md:gap-3 group shrink-0 min-w-0"
-              aria-label="Green Leaf International School & College — Home"
+              aria-label={`${siteConfig.identity.name} — Home`}
             >
-              {/* Real school logo — do NOT replace */}
-              <img
-                src="/logo.jpg"
-                alt="Green Leaf International School & College Logo"
-                className="w-10 h-10 md:w-11 md:h-11 rounded-lg object-cover shadow-sm transition-transform duration-250 ease-premium group-hover:scale-105"
-              />
-              <div className="leading-tight min-w-0">
-                <span className="block text-[13px] sm:text-[14px] md:text-[15px] font-bold text-charcoal-900 tracking-tight whitespace-nowrap">
-                  Green Leaf
-                </span>
-                <span className="block text-[9px] sm:text-[10px] md:text-[10.5px] text-charcoal-500 tracking-[0.14em] uppercase font-medium whitespace-nowrap">
-                  International School &amp; College
-                </span>
-              </div>
+              {/* Brand (logo + wordmark) from the central site config */}
+              <BrandBlock size="sm" theme="light" />
             </Link>
 
             {/* Mobile hamburger — only visible below md, keeps Row 1 identity intact */}

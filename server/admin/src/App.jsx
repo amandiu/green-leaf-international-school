@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { siteConfig } from '../../../shared/config/siteConfig';
 import useAdminAuth from './hooks/useAdminAuth';
 import AuthGate from './components/AuthGate';
 import LoginPage from './pages/LoginPage';
@@ -10,7 +11,7 @@ const Dashboard = ({ onLogout }) => (
   <div className="min-h-screen bg-charcoal-50">
     <header className="bg-white border-b border-charcoal-200 px-6 py-4">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-forest-700">Green Leaf Admin Dashboard</h1>
+        <h1 className="text-xl font-bold text-forest-700">{siteConfig.seo.adminTitle} Dashboard</h1>
         {onLogout && (
           <button
             type="button"

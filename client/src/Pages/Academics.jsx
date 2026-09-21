@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { siteConfig } from '../../../shared/config/siteConfig';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { Card } from '../Components/ui/Card';
@@ -17,7 +18,7 @@ function AcademicsHero() {
       <div className="absolute inset-0">
         <img
           src="/Activity/724720915_1449859823823195_1182340900377047256_n.jpg"
-          alt="Academic environment at Green Leaf International School"
+          alt={`Academic environment at ${siteConfig.identity.name}`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/50 to-charcoal-900/30" />
@@ -67,7 +68,7 @@ function Academics() {
               <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                 <img
                   src="/Activity/732747749_1461551622654015_1537158411137272684_n.jpg"
-                  alt="Students learning at Green Leaf International School"
+                  alt={`Students learning at ${siteConfig.identity.name}`}
                   className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                   loading="lazy"
                 />

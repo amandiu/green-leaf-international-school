@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { siteConfig } from '../../../shared/config/siteConfig';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { SectionWrapper } from '../Components/ui/SectionWrapper';
 import { Card, CardBadge } from '../Components/ui/Card';
@@ -113,7 +114,7 @@ function NewsHero() {
       <div className="absolute inset-0">
         <img
           src="/Activity/798261940_1522758883199955_4596081823843794397_n.jpg"
-          alt="News and events at Green Leaf International School"
+          alt={`News and events at ${siteConfig.identity.name}`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/50 to-charcoal-900/30" />
@@ -127,8 +128,7 @@ function NewsHero() {
           News &amp; Events
         </h1>
         <p className="text-body-lg text-white/70 max-w-2xl">
-          Stay updated with the latest happenings at Green Leaf International
-          School &amp; College.
+          Stay updated with the latest happenings at {siteConfig.identity.name}.
         </p>
       </div>
     </section>

@@ -1,6 +1,7 @@
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import Button from '../Components/ui/Button';
+import { siteConfig } from '../../../shared/config/siteConfig';
 
 const steps = [
   { number: '01', title: 'Inquiry', description: 'Reach out to us for information about admissions and available programs.' },
@@ -25,7 +26,7 @@ function AdmissionsHero() {
       <div className="absolute inset-0">
         <img
           src="/Activity/798038998_1521802776628899_2711813091562440061_n.jpg"
-          alt="Admissions at Green Leaf International School"
+          alt={`Admissions at ${siteConfig.identity.name}`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/50 to-charcoal-900/30" />
@@ -35,7 +36,7 @@ function AdmissionsHero() {
           <span className="w-1.5 h-1.5 bg-leaf-400 rounded-full" />
           Admissions
         </span>
-        <h1 className="font-heading text-display text-white mb-4">Join Green Leaf</h1>
+        <h1 className="font-heading text-display text-white mb-4">Join {siteConfig.identity.shortName}</h1>
         <p className="text-body-lg text-white/70 max-w-2xl">
           Begin your child&apos;s journey toward academic excellence and personal growth.
         </p>
@@ -133,10 +134,10 @@ function Admissions() {
             Contact our admissions office for the application form and more information.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <a href="mailto:[admissions@greenleaf.edu]">
+            <a href={`mailto:${siteConfig.contact.admissionsEmail}`}>
               <Button variant="gold" size="lg">Email Admissions</Button>
             </a>
-            <a href="tel:[phone-number]">
+            <a href={`tel:${siteConfig.contact.phone}`}>
               <Button variant="secondary" size="lg" className="border-white/25 text-white hover:bg-white/10">
                 Call Us
               </Button>

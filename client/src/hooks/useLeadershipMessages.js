@@ -18,15 +18,15 @@
 import { useEffect, useState } from 'react';
 import { getPublicLeadership } from '../services/leadershipService';
 import { leadershipMessages as FALLBACK_LEADERSHIP } from '../data/leadershipMessages';
+import { siteConfig } from '../../../shared/config/siteConfig';
 
-const SCHOOL = 'Green Leaf International School & College';
+const SCHOOL = siteConfig.identity.name;
 
-/** Verified local section copy, used while loading / on error. */
 const FALLBACK_SECTION = {
   eyebrow: 'Leadership Message',
   title: 'Messages from Our Leadership',
   description:
-    'Words of guidance and inspiration from the leaders of Green Leaf International School & College.',
+    `Words of guidance and inspiration from the leaders of ${siteConfig.identity.name}.`,
 };
 
 /** Map one API record to the rendering shape the cells expect. */

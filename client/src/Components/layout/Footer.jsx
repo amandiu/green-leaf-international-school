@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { siteConfig } from "../../../../shared/config/siteConfig";
+import BrandBlock from "../ui/BrandBlock";
 
 const quickLinks = [
   { path: "/about", label: "About Us" },
@@ -11,7 +13,7 @@ const quickLinks = [
 
 const contactInfo = [
   {
-    label: "[School Address]",
+    label: siteConfig.contact.address,
     icon: (
       <svg
         className="w-[18px] h-[18px]"
@@ -34,7 +36,7 @@ const contactInfo = [
     ),
   },
   {
-    label: "[Phone Number]",
+    label: siteConfig.contact.phone,
     icon: (
       <svg
         className="w-[18px] h-[18px]"
@@ -52,7 +54,7 @@ const contactInfo = [
     ),
   },
   {
-    label: "[Email Address]",
+    label: siteConfig.contact.email,
     icon: (
       <svg
         className="w-[18px] h-[18px]"
@@ -70,7 +72,7 @@ const contactInfo = [
     ),
   },
   {
-    label: "Sun — Thu: 8:00 AM — 4:00 PM",
+    label: siteConfig.contact.officeHours,
     icon: (
       <svg
         className="w-[18px] h-[18px]"
@@ -92,7 +94,7 @@ const contactInfo = [
 const socialLinks = [
   {
     label: "Facebook",
-    href: "https://www.facebook.com/greenleafinternationalschoolandcollege/",
+    href: siteConfig.social.facebook,
     icon: (
       <svg
         className="w-[18px] h-[18px]"
@@ -105,7 +107,7 @@ const socialLinks = [
   },
   {
     label: "YouTube",
-    href: "https://www.youtube.com/@greenleafinternationalscho29/videos",
+    href: siteConfig.social.youtube,
     icon: (
       <svg
         className="w-[18px] h-[18px]"
@@ -128,29 +130,21 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           {/* ── Column 1: School Brand ── */}
           <div className="lg:col-span-4">
-            <Link to="/" className="flex items-center gap-3 mb-5 group">
-              <img
-                src="/logo.jpg"
-                alt="Green Leaf International School & College Logo"
-                className="w-12 h-12 rounded-xl object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              <div>
-                <span className="block text-[14px] font-bold text-white leading-tight">
-                  Green Leaf
-                </span>
-                <span className="block text-[10px] text-white/50 tracking-[0.14em] uppercase font-medium leading-tight">
-                  International School &amp; College
-                </span>
-              </div>
+            <Link
+              to="/"
+              className="flex items-center gap-3 mb-5 group"
+              aria-label={`${siteConfig.identity.name} — Home`}
+            >
+              {/* Brand (logo + wordmark) from the central site config */}
+              <BrandBlock size="md" theme="dark" />
             </Link>
             <p className="text-[13px] text-white/50 leading-relaxed mb-6 max-w-[280px]">
-              Providing quality education with a focus on academic excellence,
-              moral values, and character development.
+              {siteConfig.identity.description}
             </p>
 
-            {/* Social Icons */}
+            {/* Social Icons — null entries in siteConfig are hidden */}
             <div className="flex gap-3">
-              {socialLinks.map((social) => (
+              {socialLinks.filter((social) => social.href).map((social) => (
                 <a
                   key={social.label}
                   href={social.href}
@@ -220,7 +214,7 @@ function Footer() {
       <div className="border-t border-white/[0.08]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-[12px] text-white/30">
-            &copy; {currentYear} Green Leaf International School &amp; College.
+            &copy; {currentYear} {siteConfig.identity.name}.
             All rights reserved.
           </p>
           <div className="flex gap-6 text-[12px]">

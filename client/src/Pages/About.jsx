@@ -1,6 +1,7 @@
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { Card } from '../Components/ui/Card';
+import { siteConfig } from '../../../shared/config/siteConfig';
 
 const values = [
   { title: 'Excellence', description: 'We strive for the highest standards in everything we do.', icon: '⭐' },
@@ -15,7 +16,7 @@ function AboutHero() {
       <div className="absolute inset-0">
         <img
           src="/Activity/723042553_1448847033924474_4016011292812671924_n.jpg"
-          alt="Green Leaf International School & College campus"
+          alt={`${siteConfig.identity.name} campus`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/50 to-charcoal-900/30" />
@@ -25,7 +26,7 @@ function AboutHero() {
           <span className="w-1.5 h-1.5 bg-leaf-400 rounded-full" />
           About Us
         </span>
-        <h1 className="font-heading text-display text-white mb-4">About Green Leaf</h1>
+        <h1 className="font-heading text-display text-white mb-4">About {siteConfig.identity.shortName}</h1>
         <p className="text-body-lg text-white/70 max-w-2xl">
           Discover our story, our values, and our commitment to shaping futures.
         </p>
@@ -57,7 +58,7 @@ function About() {
                 [School introduction placeholder — Replace with verified school history and background information.]
               </p>
               <p className="text-charcoal-500 leading-relaxed">
-                Green Leaf International School &amp; College is dedicated to providing a nurturing
+                {siteConfig.identity.name} is dedicated to providing a nurturing
                 environment where students can thrive academically, socially, and personally.
               </p>
             </div>
@@ -65,7 +66,7 @@ function About() {
               <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                 <img
                   src="/Activity/799142983_1523030073172836_1172060919875647706_n.jpg"
-                  alt="Green Leaf International School students and campus"
+                  alt={`${siteConfig.identity.name} students and campus`}
                   className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                   loading="lazy"
                 />
@@ -81,7 +82,7 @@ function About() {
         <SectionHeader
           badge="Our Values"
           title="Core Values"
-          description="The principles that guide everything we do at Green Leaf."
+          description={`The principles that guide everything we do at ${siteConfig.identity.shortName}.`}
         />
         <div ref={valuesRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
           {values.map((value) => (

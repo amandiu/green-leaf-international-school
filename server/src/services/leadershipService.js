@@ -33,6 +33,7 @@ import {
 } from '../validators/leadershipValidation.js';
 import { badRequest, notFound, conflict } from '../utils/errors.js';
 import { deleteUploadedImage } from '../utils/imageUpload.js';
+import { siteConfig } from '../../../shared/config/siteConfig.js';
 
 // ------------------------------------------------------------
 // Section
@@ -49,7 +50,7 @@ async function requireSection() {
       eyebrow: 'Leadership Message',
       title: 'Messages from Our Leadership',
       description:
-        'Words of guidance and inspiration from the leaders of Green Leaf International School & College.',
+        `Words of guidance and inspiration from the leaders of ${siteConfig.identity.name}.`,
     });
   }
   return section;

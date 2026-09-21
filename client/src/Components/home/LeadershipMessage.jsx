@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useScrollReveal } from "../../hooks/useScrollReveal";
 import { SectionHeader } from "../ui/SectionWrapper";
 import useLeadership from "../../hooks/useLeadershipMessages";
+import { siteConfig } from "../../../../shared/config/siteConfig";
 import "./LeadershipMessage.css"; // Imported the style engine managing width & height variables
 
 /* ═══════════════════════════════════════════
@@ -14,7 +15,7 @@ function LeadershipPortrait({ person }) {
     return (
       <img
         src={person.image}
-        alt={person.imageAlt || `Portrait of the ${person.role} of Green Leaf International School & College`}
+        alt={person.imageAlt || `Portrait of the ${person.role} of ${siteConfig.identity.name}`}
         className="lm-portrait-img"
         loading="lazy"
       />
@@ -23,7 +24,7 @@ function LeadershipPortrait({ person }) {
   return (
     <div className="lm-portrait-fallback">
       <span className="lm-portrait-initial" aria-hidden="true">
-        G
+        {siteConfig.identity.monogram}
       </span>
       <span className="lm-portrait-note">Official portrait pending</span>
     </div>

@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { siteConfig } from '../../../../shared/config/siteConfig';
 import { Alert, Loader } from '../components/Feedback';
 
 export default function LoginPage({ user, initializing, onLogin }) {
@@ -66,7 +67,7 @@ export default function LoginPage({ user, initializing, onLogin }) {
         className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg"
       >
         <h1 className="text-2xl font-bold text-forest-700 text-center">
-          Green Leaf Admin
+          {siteConfig.seo.adminTitle}
         </h1>
         <p className="mt-2 text-center text-sm text-charcoal-500">
           Sign in with your admin account.

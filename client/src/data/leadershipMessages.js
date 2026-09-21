@@ -11,6 +11,8 @@
  * The component renders a dignified placeholder only when a field is null.
  */
 
+import { siteConfig } from '../../../shared/config/siteConfig';
+
 export const leadershipMessages = [
   {
     id: "principal",
@@ -22,7 +24,7 @@ export const leadershipMessages = [
     /** Full name — NOT verified, do not fabricate. */
     name: null,
     /** Official designation line under the name. */
-    designation: "Principal, Green Leaf International School & College",
+    designation: `Principal, ${siteConfig.identity.name}`,
     /** Portrait — no verified Principal image exists in client/public. */
     image: null,
     /**
@@ -44,7 +46,7 @@ export const leadershipMessages = [
     /** Full name — NOT verified, do not fabricate. */
     name: null,
     /** Official designation line under the name. */
-    designation: "Chairman, Green Leaf International School & College",
+    designation: `Chairman, ${siteConfig.identity.name}`,
     /** Portrait — no verified Chairman image exists in client/public. */
     image: null,
     /** Alt text used ONLY when image is set AND identity is verified. */
