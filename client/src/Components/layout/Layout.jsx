@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import SettingsHeadSync from './SettingsHeadSync';
 
 function Layout() {
   const { pathname } = useLocation();
@@ -34,6 +35,9 @@ function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-50 font-body text-charcoal-800">
+      {/* Applies DB-backed title/favicon/OG once /api/settings resolves */}
+      <SettingsHeadSync />
+
       <Navbar />
 
       {/* Spacer for fixed 3-row navbar: mobile = row1 3.5rem + row3 2.25rem = 5.75rem; md = 4 + 2.75 + 2.25 = 9rem */}

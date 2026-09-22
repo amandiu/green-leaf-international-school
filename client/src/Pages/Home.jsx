@@ -6,36 +6,45 @@ import { Card, CardBadge } from "../Components/ui/Card";
 import Button from "../Components/ui/Button";
 import BrandBlock from "../Components/ui/BrandBlock";
 import LeadershipMessage from "../Components/home/LeadershipMessage";
-import {
-  siteConfig,
-  getMapsEmbedUrl,
-  getMapsDirectionsUrl,
-} from "../../../shared/config/siteConfig";
+import { useSettings } from "../context/SettingsContext";
 
-const GOOGLE_MAPS_EMBED_URL = getMapsEmbedUrl();
-const GOOGLE_MAPS_DIRECTIONS_URL = getMapsDirectionsUrl();
-const SCHOOL_ADDRESS = siteConfig.location.address;
+/* Maps URLs/address are built inside MapSection from the
+   EFFECTIVE settings (DB-backed with siteConfig fallback). */
+function mapsUrls(location) {
+  return {
+    embed: location.mapsQuery
+      ? `https://maps.google.com/maps?q=${location.mapsQuery}&z=${location.mapsZoom}&output=embed`
+      : null,
+    directions: location.mapsQuery
+      ? `https://www.google.com/maps/dir/?api=1&destination=${location.mapsQuery}`
+      : null,
+  };
+}
 
 /* ═══════════════════════════════════════════
    HERO — Split Layout with Ken Burns
+   (Page-specific hero copy stays hardcoded — later phase.
+    Only image alt text uses the effective site name.)
    ═══════════════════════════════════════════ */
-const heroImages = [
-  {
-    src: "/Hero Section/hero 1.jpg",
-    alt: `${siteConfig.identity.name} Campus`,
-  },
-  {
-    src: "/Hero Section/hero 2.jpg",
-    alt: `${siteConfig.identity.shortName} Students`,
-  },
-  {
-    src: "/Hero Section/hero 3.jpg",
-    alt: `${siteConfig.identity.shortName} Activities`,
-  },
-];
-
 function Hero() {
+  const { settings } = useSettings();
+  const { identity } = settings;
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  const heroImages = [
+    {
+      src: "/Hero Section/hero 1.jpg",
+      alt: `${identity.name} Campus`,
+    },
+    {
+      src: "/Hero Section/hero 2.jpg",
+      alt: `${identity.shortName} Students`,
+    },
+    {
+      src: "/Hero Section/hero 3.jpg",
+      alt: `${identity.shortName} Activities`,
+    },
+  ];
 
   useEffect(() => {
     const prefersReduced = window.matchMedia(
@@ -261,6 +270,8 @@ function NewsCard({ article }) {
 function RecentNewsSection() {
   const ref = useScrollReveal();
   const [showAll, setShowAll] = useState(false);
+  const { settings } = useSettings();
+  const { identity } = settings;
 
   /* Default: first 3 items. Expanded: all items, natural height. */
   const visibleItems = showAll ? newsItems : newsItems.slice(0, 3);
@@ -294,7 +305,7 @@ function RecentNewsSection() {
             Recent News &amp; Notices
           </h2>            <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
               Stay updated with the latest news, notices, events, and
-              announcements from {siteConfig.identity.shortName}.
+              announcements from {identity.shortName}.
             </p>
         </div>
 
@@ -347,7 +358,7 @@ const lifeImages = [
   },
   {
     src: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
-    alt: `School event at ${siteConfig.identity.shortName}`,
+    alt: "School event on campus",
   },
   {
     src: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
@@ -355,7 +366,7 @@ const lifeImages = [
   },
   {
     src: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
-    alt: `Student life at ${siteConfig.identity.shortName}`,
+    alt: "Student life on campus",
   },
   {
     src: "/Activity/799202494_1523030196506157_181619563109164848_n.jpg",
@@ -365,11 +376,12 @@ const lifeImages = [
 
 function StudentLife() {
   const ref = useScrollReveal();
+  const { settings } = useSettings();
   return (
     <SectionWrapper bg="bg-white" padding="py-section">
       <SectionHeader
         badge="School Life"
-        title={`Life at ${siteConfig.identity.shortName}`}
+        title={`Life at ${settings.identity.shortName}`}
         description="A vibrant community where students learn, grow, and create lasting memories."
       />
       <div
@@ -404,6 +416,8 @@ function StudentLife() {
    ═══════════════════════════════════════════ */
 function AcademicsPreview() {
   const ref = useScrollReveal();
+  const { settings } = useSettings();
+  const { identity } = settings;
   return (
     <SectionWrapper bg="bg-cream-50" padding="py-4 md:py-6 lg:py-[1rem]">
       <div ref={ref} className="reveal">
@@ -427,7 +441,7 @@ function AcademicsPreview() {
             <div className="aspect-[4/3] rounded-2xl overflow-hidden">
               <img
                 src="/Activity/724138882_1448846993924478_5789741995812830014_n.jpg"
-                alt={`Students in academic setting at ${siteConfig.identity.name}`}
+                alt={`Students in academic setting at ${identity.name}`}
                 className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                 loading="lazy"
               />
@@ -445,67 +459,73 @@ function AcademicsPreview() {
    ═══════════════════════════════════════════ */
 
 const CAROUSEL_INTERVAL = 6000;
-const SLIDE_CHANNEL_URL = siteConfig.social.youtube;
 
-const videoShowcaseData = [
-  {
-    id: 1,
-    eyebrow: "Campus Life",
-    title: `Life at ${siteConfig.identity.shortName}`,
-    description:
-      `Experience the vibrant campus life and activities at ${siteConfig.identity.name}.`,
-    videoUrl: SLIDE_CHANNEL_URL,
-    thumbnail: "/Activity/796941384_1521802823295561_1039006011241713451_n.jpg",
-    buttonText: "Watch Video",
-    metadata: ["Campus", "Student Life"],
-  },
-  {
-    id: 2,
-    eyebrow: "Student Activities",
-    title: "Learning Beyond the Classroom",
-    description:
-      `Discover learning experiences, activities, and memorable moments from ${siteConfig.identity.name}.`,
-    videoUrl: SLIDE_CHANNEL_URL,
-    thumbnail: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
-    buttonText: "Watch Video",
-    metadata: ["Activities", "Learning"],
-  },
-  {
-    id: 3,
-    eyebrow: "School Events",
-    title: "Moments That Matter",
-    description:
-      `Explore events and special moments from our school community at ${siteConfig.identity.name}.`,
-    videoUrl: SLIDE_CHANNEL_URL,
-    thumbnail: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
-    buttonText: "Watch Video",
-    metadata: ["Events", "Community"],
-  },
-  {
-    id: 4,
-    eyebrow: "Student Life",
-    title: "Growing Together",
-    description:
-      `See how our students grow, learn, and thrive in a nurturing educational environment at ${siteConfig.identity.shortName}.`,
-    videoUrl: SLIDE_CHANNEL_URL,
-    thumbnail: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
-    buttonText: "Watch Video",
-    metadata: ["Growth", "Education"],
-  },
-  {
-    id: 5,
-    eyebrow: "Our Community",
-    title: "School Spirit in Action",
-    description:
-      `Witness the spirit, dedication, and joy that define the ${siteConfig.identity.name} experience.`,
-    videoUrl: SLIDE_CHANNEL_URL,
-    thumbnail: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
-    buttonText: "Watch Video",
-    metadata: ["Spirit", "Dedication"],
-  },
-];
+/* Page-specific slide copy stays hardcoded (later phase); only
+   the channel link + inline name references use effective settings. */
+function buildVideoShowcaseData(social, identity) {
+  const SLIDE_CHANNEL_URL = social.youtube;
+  return [
+    {
+      id: 1,
+      eyebrow: "Campus Life",
+      title: `Life at ${identity.shortName}`,
+      description:
+        `Experience the vibrant campus life and activities at ${identity.name}.`,
+      videoUrl: SLIDE_CHANNEL_URL,
+      thumbnail: "/Activity/796941384_1521802823295561_1039006011241713451_n.jpg",
+      buttonText: "Watch Video",
+      metadata: ["Campus", "Student Life"],
+    },
+    {
+      id: 2,
+      eyebrow: "Student Activities",
+      title: "Learning Beyond the Classroom",
+      description:
+        `Discover learning experiences, activities, and memorable moments from ${identity.name}.`,
+      videoUrl: SLIDE_CHANNEL_URL,
+      thumbnail: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
+      buttonText: "Watch Video",
+      metadata: ["Activities", "Learning"],
+    },
+    {
+      id: 3,
+      eyebrow: "School Events",
+      title: "Moments That Matter",
+      description:
+        `Explore events and special moments from our school community at ${identity.name}.`,
+      videoUrl: SLIDE_CHANNEL_URL,
+      thumbnail: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
+      buttonText: "Watch Video",
+      metadata: ["Events", "Community"],
+    },
+    {
+      id: 4,
+      eyebrow: "Student Life",
+      title: "Growing Together",
+      description:
+        `See how our students grow, learn, and thrive in a nurturing educational environment at ${identity.shortName}.`,
+      videoUrl: SLIDE_CHANNEL_URL,
+      thumbnail: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
+      buttonText: "Watch Video",
+      metadata: ["Growth", "Education"],
+    },
+    {
+      id: 5,
+      eyebrow: "Our Community",
+      title: "School Spirit in Action",
+      description:
+        `Witness the spirit, dedication, and joy that define the ${identity.name} experience.`,
+      videoUrl: SLIDE_CHANNEL_URL,
+      thumbnail: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
+      buttonText: "Watch Video",
+      metadata: ["Spirit", "Dedication"],
+    },
+  ];
+}
 
 function VideoSection() {
+  const { settings } = useSettings();
+  const videoShowcaseData = buildVideoShowcaseData(settings.social, settings.identity);
   const sectionRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -792,7 +812,7 @@ function VideoSection() {
                 <div className="aspect-video relative bg-charcoal-800">
                   <img
                     src={activeVideo.thumbnail}
-                    alt={`${activeVideo.title} — ${siteConfig.identity.name}`}
+                    alt={`${activeVideo.title} — ${identity.name}`}
                     className="w-full h-full object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.03]"
                   />
 
@@ -948,6 +968,8 @@ function VideoSection() {
    ═══════════════════════════════════════════ */
 function AdmissionsCTA() {
   const ref = useScrollReveal();
+  const { settings } = useSettings();
+  const { identity } = settings;
 
   return (
     <section
@@ -972,7 +994,7 @@ function AdmissionsCTA() {
           Give Your Child a Place to Grow
         </h2>
         <p className="text-body-lg text-white/60 mb-8 max-w-xl mx-auto">
-          Join the {siteConfig.identity.shortName} community. Admissions are open for the upcoming
+          Join the {identity.shortName} community. Admissions are open for the upcoming
           academic year.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
@@ -1017,6 +1039,10 @@ function AdmissionsCTA() {
 
 function MapSection() {
   const ref = useScrollReveal();
+  const { settings } = useSettings();
+  const { identity, location } = settings;
+  const { embed: GOOGLE_MAPS_EMBED_URL, directions: GOOGLE_MAPS_DIRECTIONS_URL } = mapsUrls(location);
+  const SCHOOL_ADDRESS = location.address;
 
   return (
     <SectionWrapper bg="bg-white" padding="py-section">
@@ -1037,7 +1063,7 @@ function MapSection() {
           <div className="relative rounded-2xl overflow-hidden border border-charcoal-100 shadow-card bg-forest-50/40 min-h-[300px] md:min-h-[360px] lg:min-h-[420px]">
             <iframe
               src={GOOGLE_MAPS_EMBED_URL}
-              title={`${siteConfig.identity.name} location map`}
+              title={`${identity.name} location map`}
               width="100%"
               height="100%"
               style={{ border: 0 }}
@@ -1077,7 +1103,7 @@ function MapSection() {
             </div>
 
             <h3 className="font-heading text-h3 text-charcoal-900 mb-2">
-              {siteConfig.identity.name}
+              {identity.name}
             </h3>
             <p className="text-body-sm text-charcoal-500 leading-relaxed mb-5">
               Located in the heart of Adabor, easily reachable from across

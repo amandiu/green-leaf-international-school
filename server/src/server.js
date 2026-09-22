@@ -100,6 +100,11 @@ app.use('/api/admin/leadership-section', leadershipSectionAdmin);
 import uploadsRoutes from './routes/uploadsRoutes.js';
 app.use('/api/uploads', uploadsRoutes);
 
+// Site settings (Phase A): public read + adminAuth-gated read/write.
+import settingsRoutes, { adminSettingsRouter } from './routes/settingsRoutes.js';
+app.use('/api/settings', settingsRoutes);
+app.use('/api/admin/settings', adminSettingsRouter);
+
 // --------------- 404 Handler ---------------
 
 app.use((req, res) => {

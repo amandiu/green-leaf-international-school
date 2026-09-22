@@ -5,6 +5,7 @@ import AuthGate from './components/AuthGate';
 import LoginPage from './pages/LoginPage';
 import NavigationManagement from './pages/NavigationManagement';
 import LeadershipManagement from './pages/LeadershipManagement';
+import SiteSettings from './pages/SiteSettings';
 
 // Placeholder page — will be built in Phase 6
 const Dashboard = ({ onLogout }) => (
@@ -42,6 +43,15 @@ const Dashboard = ({ onLogout }) => (
           <span className="block font-semibold text-charcoal-900">Leadership Management</span>
           <span className="mt-1 block text-sm text-charcoal-500">
             Manage the Principal and Chairman messages
+          </span>
+        </Link>
+        <Link
+          to="/settings"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Site Settings</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Edit the school's global identity, contact and branding info
           </span>
         </Link>
       </nav>
@@ -97,6 +107,14 @@ function App() {
         element={
           <AuthGate initializing={initializing} user={user}>
             <LeadershipManagement onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <SiteSettings onUnauthorized={handleUnauthorized} />
           </AuthGate>
         }
       />

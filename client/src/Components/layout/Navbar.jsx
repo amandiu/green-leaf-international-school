@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import useNavigation from '../../hooks/useNavigation';
-import { siteConfig } from '../../../../shared/config/siteConfig';
+import { useSettings } from '../../context/SettingsContext';
 import BrandBlock from '../ui/BrandBlock';
 
 /* ═══════════════════════════════════════════
@@ -27,6 +27,7 @@ const tickerItems = [
 ];
 
 function Navbar() {
+  const { settings } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
@@ -458,7 +459,7 @@ function Navbar() {
             <Link
               to="/"
               className="flex items-center gap-2.5 md:gap-3 group shrink-0 min-w-0"
-              aria-label={`${siteConfig.identity.name} — Home`}
+              aria-label={`${settings.identity.name} — Home`}
             >
               {/* Brand (logo + wordmark) from the central site config */}
               <BrandBlock size="sm" theme="light" />

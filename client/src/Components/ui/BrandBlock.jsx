@@ -2,11 +2,12 @@
 // BRAND BLOCK — logo + name, reused wherever the brand appears
 // ═══════════════════════════════════════════════════════════════
 // Single rendering point for the logo/wordmark so Navbar, Footer,
-// Hero, Contact and the admin panel all stay in sync with
-// shared/config/siteConfig.js.
+// Hero, Contact and the admin panel all stay in sync with the
+// EFFECTIVE site settings (SettingsContext → /api/settings, with
+// siteConfig.js as the fallback).
 // ═══════════════════════════════════════════════════════════════
 
-import { siteConfig } from '../../../../shared/config/siteConfig';
+import { useSettings } from '../../context/SettingsContext';
 
 /**
  * Props:
@@ -20,7 +21,8 @@ function BrandBlock({
   showSubName = true,
   className = '',
 }) {
-  const { identity, branding } = siteConfig;
+  const { settings } = useSettings();
+  const { identity, branding } = settings;
 
   const sizeClasses = {
     sm: {
