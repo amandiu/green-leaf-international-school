@@ -14,11 +14,12 @@ const quickLinks = [
 function Footer() {
   const currentYear = new Date().getFullYear();
   const { settings } = useSettings();
-  const { identity, contact, social } = settings;
+  // Central location source (Phase C): site_settings.location.address
+  const { identity, contact, social, location } = settings;
 
   const contactInfo = [
     {
-      label: contact.address,
+      label: location.address,
       icon: (
         <svg
           className="w-[18px] h-[18px]"

@@ -105,6 +105,22 @@ import settingsRoutes, { adminSettingsRouter } from './routes/settingsRoutes.js'
 app.use('/api/settings', settingsRoutes);
 app.use('/api/admin/settings', adminSettingsRouter);
 
+// Page sections (Phase B): public home content + adminAuth-gated section editing.
+import pageSectionRoutes, { adminPageSectionRouter } from './routes/pageSectionRoutes.js';
+app.use('/api/pages', pageSectionRoutes);
+app.use('/api/admin/pages', adminPageSectionRouter);
+
+// Reusable content blocks (Phase D): public read + adminAuth-gated CRUD.
+import contentBlockRoutes, { adminContentRouter } from './routes/contentBlockRoutes.js';
+app.use('/api/content', contentBlockRoutes);
+app.use('/api/admin/content', adminContentRouter);
+
+// News/Notices (Phase E): central dynamic content. Public read-only
+// (PUBLISHED items only) + adminAuth-gated CRUD for the Content Center.
+import { newsPublicRoutes, newsAdminRoutes } from './routes/newsRoutes.js';
+app.use('/api/news', newsPublicRoutes);
+app.use('/api/admin/news', newsAdminRoutes);
+
 // --------------- 404 Handler ---------------
 
 app.use((req, res) => {

@@ -4,18 +4,7 @@ import { useSettings } from '../context/SettingsContext';
 import { SectionWrapper } from '../Components/ui/SectionWrapper';
 import Button from '../Components/ui/Button';
 import BrandBlock from '../Components/ui/BrandBlock';
-
-/** Maps embed/directions URLs built from the EFFECTIVE settings. */
-function mapsUrls(location) {
-  return {
-    embed: location.mapsQuery
-      ? `https://maps.google.com/maps?q=${location.mapsQuery}&z=${location.mapsZoom}&output=embed`
-      : null,
-    directions: location.mapsQuery
-      ? `https://www.google.com/maps/dir/?api=1&destination=${location.mapsQuery}`
-      : null,
-  };
-}
+import { buildMapsUrls } from '../../../shared/utils/mapsUrls';
 
 function ContactHero() {
   const { settings } = useSettings();
@@ -48,13 +37,16 @@ function ContactHero() {
 function Contact() {
   const { settings } = useSettings();
   const { identity, branding, contact, social, location } = settings;
-  const { embed: GOOGLE_MAPS_EMBED_URL, directions: GOOGLE_MAPS_DIRECTIONS_URL } = mapsUrls(location);
+  // Shared builder (Phase C): same central source as the Homepage map.
+  const { embed: GOOGLE_MAPS_EMBED_URL, directions: GOOGLE_MAPS_DIRECTIONS_URL } = buildMapsUrls(location);
+  // Central location source: site_settings.location.address
+  // (the retired contact.address duplicate is no longer read).
   const SCHOOL_ADDRESS = location.address;
 
   const contactDetails = [
     {
       label: 'Address',
-      value: contact.address,
+      value: location.address,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />

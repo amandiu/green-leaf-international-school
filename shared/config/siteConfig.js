@@ -49,7 +49,8 @@ export const siteConfig = {
     /** Shown in Footer/Contact. Keep placeholders until verified. */
     email: '[Email Address]',
     phone: '[Phone Number]',
-    address: '[School Address]',
+    // Phase C: contact.address was removed — location.address below
+    // is the ONE editable school address (single source of truth).
     /** Public contact form address (Admissions "Email Admissions" CTA). */
     admissionsEmail: '[admissions@greenleaf.edu]',
     officeHours: 'Sun — Thu: 8:00 AM — 4:00 PM',
@@ -99,16 +100,14 @@ export const siteConfig = {
 // Components should use these helpers instead of re-building URLs.
 // ═══════════════════════════════════════════════════════════════
 
-/** Google Maps embed URL for the campus map iframe. */
-export const getMapsEmbedUrl = () =>
-  siteConfig.location.mapsQuery
-    ? `https://maps.google.com/maps?q=${siteConfig.location.mapsQuery}&z=${siteConfig.location.mapsZoom}&output=embed`
-    : null;
+// Phase C: the URL templates live in ONE shared builder so the
+// config helpers and every settings-driven consumer share them.
+import { buildMapsUrls } from '../utils/mapsUrls.js';
 
-/** Google Maps "Get Directions" URL. */
-export const getMapsDirectionsUrl = () =>
-  siteConfig.location.mapsQuery
-    ? `https://www.google.com/maps/dir/?api=1&destination=${siteConfig.location.mapsQuery}`
-    : null;
+/** Google Maps embed URL for the campus map iframe (config fallback). */
+export const getMapsEmbedUrl = () => buildMapsUrls(siteConfig.location).embed;
+
+/** Google Maps "Get Directions" URL (config fallback). */
+export const getMapsDirectionsUrl = () => buildMapsUrls(siteConfig.location).directions;
 
 export default siteConfig;

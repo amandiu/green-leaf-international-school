@@ -459,13 +459,14 @@ async function verify() {
       'setting_key has a UNIQUE index',
     );
 
-    // S4. Seed count: 24 settings seeded (one row per setting)
-    // 6 identity + 3 branding + 6 contact + 4 social + 3 location + 2 seo
+    // S4. Seed count (Phase C: 6 contact fields — contact.address
+    // was retired; legacy DBs may still carry it as a 25th row).
+    // 6 identity + 3 branding + 5 contact + 4 social + 3 location + 2 seo
     const [settingRows] = await conn.query(
       'SELECT setting_key, setting_group FROM `site_settings`',
     );
     check(
-      settingRows.length === 24,
+      settingRows.length === 24 || settingRows.length === 25,
       `24 site settings present (got: ${settingRows.length})`,
     );
     const seededGroups = new Set(settingRows.map((r) => r.setting_group));

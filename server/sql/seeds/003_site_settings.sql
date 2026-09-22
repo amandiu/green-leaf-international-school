@@ -58,9 +58,10 @@ INSERT INTO `site_settings` (`setting_key`, `setting_value`, `setting_group`)
 SELECT 'contact.phone', '[Phone Number]', 'contact'
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `site_settings` WHERE `setting_key` = 'contact.phone');
 
-INSERT INTO `site_settings` (`setting_key`, `setting_value`, `setting_group`)
-SELECT 'contact.address', '[School Address]', 'contact'
-FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `site_settings` WHERE `setting_key` = 'contact.address');
+-- Phase C: 'contact.address' is no longer seeded — location.address
+-- is the ONE editable school address (single source of truth).
+-- Legacy DBs may still carry the retired row; the settings service
+-- never serves or updates it.
 
 INSERT INTO `site_settings` (`setting_key`, `setting_value`, `setting_group`)
 SELECT 'contact.admissionsEmail', '[admissions@greenleaf.edu]', 'contact'

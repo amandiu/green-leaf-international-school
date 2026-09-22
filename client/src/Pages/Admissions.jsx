@@ -1,7 +1,8 @@
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
-import Button from '../Components/ui/Button';
 import { useSettings } from '../context/SettingsContext';
+import { useReusableContent } from '../hooks/useReusableContent';
+import CtaBand from '../Components/content/CtaBand';
 
 const steps = [
   { number: '01', title: 'Inquiry', description: 'Reach out to us for information about admissions and available programs.' },
@@ -47,9 +48,28 @@ function AdmissionsHero() {
   );
 }
 
+/* Shared admissions CTA content (Phase D): resolved from the
+   reusable block 'admissions-primary-cta'. Shows this page's
+   original action pair (email, call) with the original button
+   styles. Gold primary matches the pre-Phase-D band. */
+function AdmissionsCtaBandContent() {
+  const { getBlock } = useReusableContent();
+  const block = getBlock('admissions-primary-cta');
+  return (
+    <CtaBand
+      block={block}
+      actionIds={['email', 'call']}
+      actionButtonProps={[
+        { variant: 'gold', size: 'lg' },
+        { variant: 'secondary', size: 'lg', className: 'border-white/25 text-white hover:bg-white/10' },
+      ]}
+      descriptionClass="text-forest-100"
+    />
+  );
+}
+
 function Admissions() {
   const { settings } = useSettings();
-  const { contact } = settings;
   const introRef = useScrollReveal();
   const processRef = useScrollReveal();
   const reqRef = useScrollReveal();
@@ -120,7 +140,10 @@ function Admissions() {
         </div>
       </SectionWrapper>
 
-      {/* CTA */}
+      {/* CTA — reusable block (Phase D): same shared content as
+          the Homepage band; this page shows its original pair of
+          contact actions (email, call). The contact values come
+          from Site Settings via {{tokens}} — never copied here. */}
       <section className="relative bg-forest-700 py-section overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -133,20 +156,7 @@ function Admissions() {
           <div className="absolute inset-0 bg-forest-700/80" />
         </div>
         <div className="container-custom relative z-10 text-center">
-          <h2 className="font-heading text-h2 text-white mb-4">Ready to Apply?</h2>
-          <p className="text-body-lg text-forest-100 mb-8 max-w-xl mx-auto">
-            Contact our admissions office for the application form and more information.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a href={`mailto:${contact.admissionsEmail}`}>
-              <Button variant="gold" size="lg">Email Admissions</Button>
-            </a>
-            <a href={`tel:${contact.phone}`}>
-              <Button variant="secondary" size="lg" className="border-white/25 text-white hover:bg-white/10">
-                Call Us
-              </Button>
-            </a>
-          </div>
+          <AdmissionsCtaBandContent />
         </div>
       </section>
     </>

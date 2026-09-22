@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { Link } from "react-router-dom";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 import { SectionWrapper, SectionHeader } from "../Components/ui/SectionWrapper";
@@ -7,44 +7,54 @@ import Button from "../Components/ui/Button";
 import BrandBlock from "../Components/ui/BrandBlock";
 import LeadershipMessage from "../Components/home/LeadershipMessage";
 import { useSettings } from "../context/SettingsContext";
+import { useHomeContent } from "../hooks/useHomeContent";
+import { useNews } from "../hooks/useNews";
+import { useReusableContent } from "../hooks/useReusableContent";
+import CtaBand from "../Components/content/CtaBand";
+import { buildMapsUrls } from "../../../shared/utils/mapsUrls";
 
-/* Maps URLs/address are built inside MapSection from the
-   EFFECTIVE settings (DB-backed with siteConfig fallback). */
-function mapsUrls(location) {
-  return {
-    embed: location.mapsQuery
-      ? `https://maps.google.com/maps?q=${location.mapsQuery}&z=${location.mapsZoom}&output=embed`
-      : null,
-    directions: location.mapsQuery
-      ? `https://www.google.com/maps/dir/?api=1&destination=${location.mapsQuery}`
-      : null,
+/* Maps URLs are built by the ONE shared builder (Phase C) from
+   the EFFECTIVE settings (DB-backed with siteConfig fallback).
+   No page-local URL template remains. */
+
+/* Headline renderer: '|' marks the desktop line break (hidden on
+   mobile, exactly like the original hardcoded markup) and '&'
+   gets the leaf-300 accent. Admins edit ONE plain string. */
+function HeroHeadline({ text }) {
+  const withAmp = (s) => {
+    const parts = String(s ?? "").split("&");
+    if (parts.length === 1) return parts[0];
+    return parts.map((p, i) => (
+      <Fragment key={i}>
+        {i > 0 && <span className="text-leaf-300">&amp;</span>}
+        {p}
+      </Fragment>
+    ));
   };
+  const [line1, line2, ...rest] = String(text ?? "").split("|");
+  if (!line2) return withAmp(text);
+  return (
+    <>
+      {withAmp(line1)}
+      <br className="hidden sm:block" />
+      {withAmp([line2, ...rest].join("|"))}
+    </>
+  );
 }
 
 /* ═══════════════════════════════════════════
    HERO — Split Layout with Ken Burns
-   (Page-specific hero copy stays hardcoded — later phase.
-    Only image alt text uses the effective site name.)
+   Content is DB-backed (Phase B): headline/subtext/buttons/
+   slides come from useHomeContent() with the current values as
+   built-in fallback. Slide animation, timing and layout are
+   UNCHANGED — only the data source moved.
    ═══════════════════════════════════════════ */
 function Hero() {
-  const { settings } = useSettings();
-  const { identity } = settings;
+  const { content } = useHomeContent();
+  const hero = content.hero;
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const heroImages = [
-    {
-      src: "/Hero Section/hero 1.jpg",
-      alt: `${identity.name} Campus`,
-    },
-    {
-      src: "/Hero Section/hero 2.jpg",
-      alt: `${identity.shortName} Students`,
-    },
-    {
-      src: "/Hero Section/hero 3.jpg",
-      alt: `${identity.shortName} Activities`,
-    },
-  ];
+  const heroImages = hero.slides;
 
   useEffect(() => {
     const prefersReduced = window.matchMedia(
@@ -82,45 +92,47 @@ function Hero() {
               <BrandBlock size="lg" theme="dark" />
             </div>
             <h1 className="font-heading text-[2.25rem] md:text-[2.75rem] lg:text-[3.25rem] leading-[1.1] text-white mb-4 opacity-0 animate-[fadeInUp_0.6s_ease-out_0.2s_forwards]">
-              Excellence in <br className="hidden sm:block" />
-              Knowledge <span className="text-leaf-300">&amp;</span> Character
+              <HeroHeadline text={hero.headline} />
             </h1>
             <p className="text-[15px] md:text-body-lg text-white/75 max-w-md mb-7 leading-relaxed opacity-0 animate-[fadeInUp_0.6s_ease-out_0.35s_forwards]">
-              A place where knowledge grows, character develops, and students
-              prepare for a successful future.
+              {hero.subtext}
             </p>
             <div className="flex flex-wrap items-center gap-3 opacity-0 animate-[fadeInUp_0.6s_ease-out_0.5s_forwards]">
-              <Link to="/about" className="group">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="bg-leaf-600 hover:bg-leaf-700 hover:shadow-leaf-600/25"
-                >
-                  Explore Our School
-                  <svg
-                    className="w-4 h-4 transition-transform duration-250 ease-premium group-hover:translate-x-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
+              {hero.primaryButton?.text && hero.primaryButton?.link && (
+                <Link to={hero.primaryButton.link} className="group">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="bg-leaf-600 hover:bg-leaf-700 hover:shadow-leaf-600/25"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13 7l5 5m0 0l-5 5m5-5H6"
-                    />
-                  </svg>
-                </Button>
-              </Link>
-              <Link to="/admissions">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="border-white/25 text-white hover:bg-white/10"
-                >
-                  Admissions
-                </Button>
-              </Link>
+                    {hero.primaryButton.text}
+                    <svg
+                      className="w-4 h-4 transition-transform duration-250 ease-premium group-hover:translate-x-0.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
+                    </svg>
+                  </Button>
+                </Link>
+              )}
+              {hero.secondaryButton?.text && hero.secondaryButton?.link && (
+                <Link to={hero.secondaryButton.link}>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="border-white/25 text-white hover:bg-white/10"
+                  >
+                    {hero.secondaryButton.text}
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
           <div className="hidden lg:block opacity-0 animate-[heroSlideIn_0.8s_ease-out_0.3s_forwards]">
@@ -151,55 +163,10 @@ function Hero() {
   );
 }
 
-const newsItems = [
-  {
-    id: 1,
-    category: "Notice",
-    title: "Admission Information for [Year]",
-    date: "[Date]",
-    color: "bg-forest-600",
-  },
-  {
-    id: 2,
-    category: "News",
-    title: "[News Title Placeholder]",
-    date: "[Date]",
-    image: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
-    excerpt:
-      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
-    color: "bg-charcoal-600",
-  },
-  {
-    id: 3,
-    category: "Event",
-    title: "[School Event Placeholder]",
-    date: "[Date]",
-    image: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
-    excerpt:
-      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
-    color: "bg-gold-600",
-  },
-  {
-    id: 4,
-    category: "Announcement",
-    title: "[Important Announcement]",
-    date: "[Date]",
-    image: "/Activity/799202494_1523030196506157_181619563109164848_n.jpg",
-    excerpt:
-      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
-    color: "bg-leaf-600",
-  },
-  {
-    id: 5,
-    category: "Notice",
-    title: "[Exam Schedule Placeholder]",
-    date: "[Date]",
-    image: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
-    excerpt:
-      "[News excerpt placeholder — real news content will replace this via the admin panel.]",
-    color: "bg-forest-600",
-  },
-];
+/* Phase E: preview ITEMS come from the CENTRAL news source
+   (NewsProvider → GET /api/news, fetched once at the app root).
+   Only the section heading/description remain homepage content
+   (admin-editable via Homepage CMS). No copied item arrays. */
 
 
 
@@ -213,6 +180,10 @@ const newsItems = [
 function NewsCard({ article }) {
   return (
     <article className="group h-full">
+      <Link
+        to={`/news/${article.slug}`}
+        className="block h-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600 rounded-2xl"
+      >
       <Card className="h-full" padding={false}>
         {/* Image — elegant neutral fallback when missing */}
         {article.image ? (
@@ -248,10 +219,12 @@ function NewsCard({ article }) {
         {/* Content */}
         <div className="p-5 md:p-6">
           <div className="flex items-center gap-2.5 mb-3">
-            <CardBadge>{article.category}</CardBadge>
-            <span className="text-caption text-charcoal-400">
-              {article.date}
-            </span>
+            <CardBadge>{article.type}</CardBadge>
+            {article.dateLabel && (
+              <span className="text-caption text-charcoal-400">
+                {article.dateLabel}
+              </span>
+            )}
           </div>
           <h3 className="font-heading text-[15px] md:text-h3 font-semibold text-charcoal-900 mb-2 leading-snug group-hover:text-forest-700 transition-colors duration-200">
             {article.title}
@@ -263,6 +236,7 @@ function NewsCard({ article }) {
           )}
         </div>
       </Card>
+      </Link>
     </article>
   );
 }
@@ -270,12 +244,17 @@ function NewsCard({ article }) {
 function RecentNewsSection() {
   const ref = useScrollReveal();
   const [showAll, setShowAll] = useState(false);
-  const { settings } = useSettings();
-  const { identity } = settings;
+  const { content } = useHomeContent();
+  const { items: publishedNews } = useNews();
+  const news = content.newsPreview;
+  /* Phase E: the items are the CENTRAL published news (newest
+     first). Default view shows the first 3; Show All expands to
+     every published item. Section heading stays homepage CMS. */
+  const items = publishedNews;
 
   /* Default: first 3 items. Expanded: all items, natural height. */
-  const visibleItems = showAll ? newsItems : newsItems.slice(0, 3);
-  const hasMore = newsItems.length > 3;
+  const visibleItems = showAll ? items : items.slice(0, 3);
+  const hasMore = items.length > 3;
 
   return (
     <section className="relative bg-cream-50 py-4 md:py-6 lg:py-8 overflow-hidden">
@@ -300,16 +279,15 @@ function RecentNewsSection() {
       <div className="container-custom relative z-10">
         {/* Section Header */}
         <div className="text-center mb-12 md:mb-16">
-          <span className="eyebrow mb-4">Recent Updates</span>
+          {news.eyebrow && <span className="eyebrow mb-4">{news.eyebrow}</span>}
           <h2 className="font-heading text-h2 text-charcoal-900 mb-4 mt-3">
-            Recent News &amp; Notices
+            {news.title}
           </h2>            <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
-              Stay updated with the latest news, notices, events, and
-              announcements from {identity.shortName}.
+              {news.description}
             </p>
         </div>
 
-        {newsItems.length === 0 ? (
+        {items.length === 0 ? (
           /* Empty state — no empty grid, keep the section clean */
           <Card hover={false} className="max-w-xl mx-auto text-center">
             <p className="text-charcoal-500">
@@ -376,13 +354,15 @@ const lifeImages = [
 
 function StudentLife() {
   const ref = useScrollReveal();
-  const { settings } = useSettings();
+  const { content } = useHomeContent();
+  const life = content.lifeAtSchool;
+  const lifeImages = life.images;
   return (
     <SectionWrapper bg="bg-white" padding="py-section">
       <SectionHeader
-        badge="School Life"
-        title={`Life at ${settings.identity.shortName}`}
-        description="A vibrant community where students learn, grow, and create lasting memories."
+        badge={life.eyebrow}
+        title={life.title}
+        description={life.description}
       />
       <div
         ref={ref}
@@ -460,72 +440,15 @@ function AcademicsPreview() {
 
 const CAROUSEL_INTERVAL = 6000;
 
-/* Page-specific slide copy stays hardcoded (later phase); only
-   the channel link + inline name references use effective settings. */
-function buildVideoShowcaseData(social, identity) {
-  const SLIDE_CHANNEL_URL = social.youtube;
-  return [
-    {
-      id: 1,
-      eyebrow: "Campus Life",
-      title: `Life at ${identity.shortName}`,
-      description:
-        `Experience the vibrant campus life and activities at ${identity.name}.`,
-      videoUrl: SLIDE_CHANNEL_URL,
-      thumbnail: "/Activity/796941384_1521802823295561_1039006011241713451_n.jpg",
-      buttonText: "Watch Video",
-      metadata: ["Campus", "Student Life"],
-    },
-    {
-      id: 2,
-      eyebrow: "Student Activities",
-      title: "Learning Beyond the Classroom",
-      description:
-        `Discover learning experiences, activities, and memorable moments from ${identity.name}.`,
-      videoUrl: SLIDE_CHANNEL_URL,
-      thumbnail: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
-      buttonText: "Watch Video",
-      metadata: ["Activities", "Learning"],
-    },
-    {
-      id: 3,
-      eyebrow: "School Events",
-      title: "Moments That Matter",
-      description:
-        `Explore events and special moments from our school community at ${identity.name}.`,
-      videoUrl: SLIDE_CHANNEL_URL,
-      thumbnail: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
-      buttonText: "Watch Video",
-      metadata: ["Events", "Community"],
-    },
-    {
-      id: 4,
-      eyebrow: "Student Life",
-      title: "Growing Together",
-      description:
-        `See how our students grow, learn, and thrive in a nurturing educational environment at ${identity.shortName}.`,
-      videoUrl: SLIDE_CHANNEL_URL,
-      thumbnail: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
-      buttonText: "Watch Video",
-      metadata: ["Growth", "Education"],
-    },
-    {
-      id: 5,
-      eyebrow: "Our Community",
-      title: "School Spirit in Action",
-      description:
-        `Witness the spirit, dedication, and joy that define the ${identity.name} experience.`,
-      videoUrl: SLIDE_CHANNEL_URL,
-      thumbnail: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
-      buttonText: "Watch Video",
-      metadata: ["Spirit", "Dedication"],
-    },
-  ];
-}
-
+/* Page-specific slide copy was moved to DB-backed content
+   (Phase B): slides come from useHomeContent() with the exact
+   current values as built-in fallback (shared/content/
+   homeContent.js). The {{social.youtube}} token keeps slide
+   links following Site Settings. */
 function VideoSection() {
   const { settings } = useSettings();
-  const videoShowcaseData = buildVideoShowcaseData(settings.social, settings.identity);
+  const { content } = useHomeContent();
+  const videoShowcaseData = content.videoShowcase.slides;
   const sectionRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -812,7 +735,7 @@ function VideoSection() {
                 <div className="aspect-video relative bg-charcoal-800">
                   <img
                     src={activeVideo.thumbnail}
-                    alt={`${activeVideo.title} — ${identity.name}`}
+                    alt={`${activeVideo.title} — ${settings.identity.name}`}
                     className="w-full h-full object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.03]"
                   />
 
@@ -964,12 +887,35 @@ function VideoSection() {
 }
 
 /* ═══════════════════════════════════════════
-   ADMISSIONS CTA — School-style
+   ADMISSIONS CTA — reusable block (Phase D)
+   Content lives in the shared block
+   'admissions-primary-cta' (Admin → Content
+   Center). This page shows its original pair
+   of actions (info, contact-page) — same
+   design as before.
    ═══════════════════════════════════════════ */
 function AdmissionsCTA() {
   const ref = useScrollReveal();
-  const { settings } = useSettings();
-  const { identity } = settings;
+  const { content } = useHomeContent();
+  const { getBlock } = useReusableContent();
+  // content.admissionsCta shapes (server-resolved):
+  //   { __block }      → reference marker (defaults/loading):
+  //                      resolve via the reusable-block provider
+  //                      (which has its own API-down fallback)
+  //   null             → section/block hidden → render nothing
+  //   full CTA object  → legacy row not yet migrated → as before
+  //   undefined        → no data yet → provider fallback
+  const raw = content.admissionsCta;
+  let cta;
+  if (raw === null) {
+    cta = null;
+  } else if (raw && raw.__block) {
+    cta = getBlock(raw.__block);
+  } else if (raw) {
+    cta = raw;
+  } else {
+    cta = getBlock("admissions-primary-cta");
+  }
 
   return (
     <section
@@ -990,42 +936,14 @@ function AdmissionsCTA() {
         ref={ref}
         className="container-custom relative z-10 text-center reveal"
       >
-        <h2 className="font-heading text-h2 text-white mb-4">
-          Give Your Child a Place to Grow
-        </h2>
-        <p className="text-body-lg text-white/60 mb-8 max-w-xl mx-auto">
-          Join the {identity.shortName} community. Admissions are open for the upcoming
-          academic year.
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link to="/admissions" className="group">
-            <Button variant="gold" size="lg">
-              Admission Information
-              <svg
-                className="w-4 h-4 transition-transform duration-250 ease-premium group-hover:translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13 7l5 5m0 0l-5 5m5-5H6"
-                />
-              </svg>
-            </Button>
-          </Link>
-          <Link to="/contact">
-            <Button
-              variant="secondary"
-              size="lg"
-              className="border-white/25 text-white hover:bg-white/10"
-            >
-              Contact School
-            </Button>
-          </Link>
-        </div>
+        <CtaBand
+          block={cta}
+          actionIds={["info", "contact-page"]}
+          actionButtonProps={[
+            { variant: "gold", size: "lg" },
+            { variant: "secondary", size: "lg", className: "border-white/25 text-white hover:bg-white/10" },
+          ]}
+        />
       </div>
     </section>
   );
@@ -1040,8 +958,9 @@ function AdmissionsCTA() {
 function MapSection() {
   const ref = useScrollReveal();
   const { settings } = useSettings();
-  const { identity, location } = settings;
-  const { embed: GOOGLE_MAPS_EMBED_URL, directions: GOOGLE_MAPS_DIRECTIONS_URL } = mapsUrls(location);
+  const { identity, contact, location } = settings;
+  const { embed: GOOGLE_MAPS_EMBED_URL, directions: GOOGLE_MAPS_DIRECTIONS_URL } = buildMapsUrls(location);
+  // Central location source (Phase C): site_settings.location.address.
   const SCHOOL_ADDRESS = location.address;
 
   return (
@@ -1053,25 +972,34 @@ function MapSection() {
             Find Us on the Map
           </h2>
           <p className="text-body-lg text-charcoal-500 leading-relaxed max-w-2xl mx-auto">
-            Visit our campus in Adabor, Dhaka — we would love to show you
-            around.
+            Visit our campus — we would love to show you around.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-[1.7fr_1fr] gap-6 lg:gap-8 items-stretch">
           {/* ── MAP AREA ── */}
           <div className="relative rounded-2xl overflow-hidden border border-charcoal-100 shadow-card bg-forest-50/40 min-h-[300px] md:min-h-[360px] lg:min-h-[420px]">
-            <iframe
-              src={GOOGLE_MAPS_EMBED_URL}
-              title={`${identity.name} location map`}
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              className="absolute inset-0 w-full h-full"
-            />
+            {GOOGLE_MAPS_EMBED_URL ? (
+              <iframe
+                src={GOOGLE_MAPS_EMBED_URL}
+                title={`${identity.name} location map`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+                className="absolute inset-0 w-full h-full"
+              />
+            ) : (
+              /* Branded stand-in while no Maps Query is configured
+                 (same fallback pattern as the Contact page). */
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                <img src="/logo.jpg" alt="" aria-hidden="true" className="w-14 h-14 rounded-xl object-cover shadow-md mb-4 opacity-90" />
+                <p className="font-heading text-h3 text-charcoal-800 mb-1">{identity.name}</p>
+                <p className="text-body-sm text-charcoal-400 italic">Campus map will appear here once the verified location is configured.</p>
+              </div>
+            )}
             {/* Overlay badge — top placement keeps Google map controls clear */}
             <span className="absolute top-4 left-4 z-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-charcoal-100 shadow-sm text-[11px] font-bold uppercase tracking-[0.14em] text-forest-700">
               <span className="w-1.5 h-1.5 bg-forest-600 rounded-full" />
@@ -1105,45 +1033,65 @@ function MapSection() {
             <h3 className="font-heading text-h3 text-charcoal-900 mb-2">
               {identity.name}
             </h3>
+            {/* Descriptive line follows the central address; a
+                graceful fallback replaces the old hardcoded text. */}
             <p className="text-body-sm text-charcoal-500 leading-relaxed mb-5">
-              Located in the heart of Adabor, easily reachable from across
-              Dhaka.
+              {SCHOOL_ADDRESS
+                ? "Easily reachable from across the city."
+                : "Location details will be published here soon."}
             </p>
 
-            <p className="text-body-sm text-charcoal-700 leading-relaxed mb-6">
-              {SCHOOL_ADDRESS}
-            </p>
+            {SCHOOL_ADDRESS ? (
+              <p className="text-body-sm text-charcoal-700 leading-relaxed mb-6">
+                {SCHOOL_ADDRESS}
+              </p>
+            ) : (
+              <p className="text-body-sm text-charcoal-400 italic mb-6">
+                Official address will be published here soon.
+              </p>
+            )}
 
-            <a
-              href={GOOGLE_MAPS_DIRECTIONS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-forest-700 text-white text-body-sm font-semibold transition-all duration-250 ease-premium hover:bg-forest-800 hover:shadow-lg hover:shadow-forest-700/20 active:bg-forest-900 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
-            >
-              Get Directions
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
+            {GOOGLE_MAPS_DIRECTIONS_URL ? (
+              <a
+                href={GOOGLE_MAPS_DIRECTIONS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-forest-700 text-white text-body-sm font-semibold transition-all duration-250 ease-premium hover:bg-forest-800 hover:shadow-lg hover:shadow-forest-700/20 active:bg-forest-900 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13 7l5 5m0 0l-5 5m5-5H6"
-                />
-              </svg>
-            </a>
+                Get Directions
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  />
+                </svg>
+              </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-forest-700/40 text-white/70 text-body-sm font-semibold cursor-not-allowed"
+              >
+                Get Directions
+              </button>
+            )}
 
             <div className="mt-auto pt-6 border-t border-charcoal-100/70">
               <p className="text-caption text-charcoal-400 uppercase tracking-[0.1em] font-semibold mb-1">
                 Office Hours
               </p>
+              {/* Central source: site_settings.contact.officeHours */}
               <p className="text-body-sm text-charcoal-500">
-                Sun — Thu: 8:00 AM — 4:00 PM
+                {contact.officeHours}
               </p>
-              <p className="text-body-sm text-charcoal-400">Fri — Sat: Closed</p>
+              <p className="text-body-sm text-charcoal-400">{contact.officeHoursClosed}</p>
             </div>
           </div>
         </div>

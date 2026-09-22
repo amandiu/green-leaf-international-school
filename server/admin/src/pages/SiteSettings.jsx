@@ -1,13 +1,18 @@
 // ------------------------------------------------------------
-// Site Settings page (Phase A)
+// Site Settings page (Phase A + Phase C)
 //
 // Admin → Site Settings: edits the global, DB-backed site
-// settings (identity, branding, contact, social, location, seo)
-// via GET/PUT /api/admin/settings. Architecture mirrors
+// settings (identity, branding, contact, social, seo) via
+// GET/PUT /api/admin/settings. Architecture mirrors
 // NavigationManagement/LeadershipManagement: section cards +
 // shared Alert/Loader primitives + the 401/503 session-drop
 // convention. Image fields (logo/favicon/ogImage) accept existing
 // valid paths/URLs only — actual media management is Phase E.
+//
+// Phase C: the Location group moved to Admin → Content Center
+// (Location & Map is central content used by multiple pages and
+// must have exactly ONE editing surface). The retired
+// contact.address duplicate was removed from the Contact card.
 // ------------------------------------------------------------
 
 import { useCallback, useEffect, useState } from 'react';
@@ -46,11 +51,11 @@ const SECTIONS = [
   {
     group: 'contact',
     title: 'Contact',
-    description: 'Shown in the footer and the public Contact page.',
+    description:
+      'Shown in the footer and the public Contact page. The school address lives in the Content Center → Location & Map.',
     fields: [
       { name: 'email', label: 'Email', type: 'email', maxLength: 500, required: true },
       { name: 'phone', label: 'Phone', type: 'text', maxLength: 500, required: true },
-      { name: 'address', label: 'Address', type: 'text', maxLength: 500, required: true },
       { name: 'admissionsEmail', label: 'Admissions Email', type: 'email', maxLength: 500, required: true },
       { name: 'officeHours', label: 'Office Hours', type: 'text', maxLength: 500, required: true },
       { name: 'officeHoursClosed', label: 'Closed Day/Hours', type: 'text', maxLength: 500, required: true },
@@ -67,17 +72,9 @@ const SECTIONS = [
       { name: 'linkedin', label: 'LinkedIn', type: 'url', maxLength: 500, nullable: true },
     ],
   },
-  {
-    group: 'location',
-    title: 'Location',
-    description:
-      'Maps Query feeds the Google Maps embed and directions link (spaces as “+”). Empty query hides the map.',
-    fields: [
-      { name: 'address', label: 'Address', type: 'text', maxLength: 500, nullable: true },
-      { name: 'mapsQuery', label: 'Maps Query', type: 'text', maxLength: 500, nullable: true },
-      { name: 'mapsZoom', label: 'Maps Zoom (1–22)', type: 'number', min: 1, max: 22, nullable: true },
-    ],
-  },
+  // Phase C: the location group moved to the Content Center —
+  // Location & Map is central content consumed by multiple pages,
+  // so it is edited in exactly one place.
   {
     group: 'seo',
     title: 'SEO',

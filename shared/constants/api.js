@@ -14,6 +14,8 @@ export const API_ROUTES = {
   LEADERSHIP: '/api/leadership',
   LEADERSHIP_MESSAGES: '/api/leadership-messages',
   SETTINGS: '/api/settings',
+  PAGES_HOME: '/api/pages/home',
+  CONTENT_BLOCKS: '/api/content/blocks',
   UPLOADS: '/api/uploads',
 };
 

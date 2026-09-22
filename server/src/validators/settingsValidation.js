@@ -1,11 +1,16 @@
 // ------------------------------------------------------------
-// Site settings input validation (Phase A)
+// Site settings input validation (Phase A + Phase C)
 //
 // Pure format/shape validation — no database access. Defines the
 // ALLOWED setting groups/keys (anything unknown is rejected, not
 // silently accepted) and per-field rules shared by:
 //   - PUT /api/admin/settings   (full/partial group payloads)
 //   - the seed source of truth (siteConfig.js structure)
+//
+// Phase C single-source-of-truth rule: the school address is
+// `location.address` ONLY. The old `contact.address` duplicate is
+// retired — writes are rejected (400) and consumers read the
+// central location value.
 // ------------------------------------------------------------
 
 import { badRequest } from '../utils/errors.js';
@@ -16,8 +21,10 @@ export const SETTING_GROUPS = Object.freeze({
     'name', 'shortName', 'subName', 'tagline', 'description', 'monogram',
   ],
   branding: ['logo', 'favicon', 'ogImage'],
+  // Phase C: 'address' removed — location.address is the ONLY
+  // editable school address (single source of truth).
   contact: [
-    'email', 'phone', 'address', 'admissionsEmail',
+    'email', 'phone', 'admissionsEmail',
     'officeHours', 'officeHoursClosed',
   ],
   social: ['facebook', 'youtube', 'instagram', 'linkedin'],
@@ -111,7 +118,6 @@ function validateField(group, field, value) {
       return str;
     }
     case 'contact.phone':
-    case 'contact.address':
     case 'contact.officeHours':
     case 'contact.officeHoursClosed':
       // Free-form display strings — not over-restricted.

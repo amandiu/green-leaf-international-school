@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import useNavigation from '../../hooks/useNavigation';
 import { useSettings } from '../../context/SettingsContext';
+import { useNews } from '../../hooks/useNews';
 import BrandBlock from '../ui/BrandBlock';
 
 /* ═══════════════════════════════════════════
@@ -13,21 +14,16 @@ import BrandBlock from '../ui/BrandBlock';
    ═══════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════
-   LATEST NEWS — existing project placeholder
-   news data (mirrors Home.jsx newsItems).
-   No fabricated school news, no invented dates/URLs.
-   Items are non-clickable until real news URLs exist.
+   LATEST NEWS — Phase E: the ticker consumes the
+   CENTRAL published news list (useNews → /api/news,
+   fetched once at the app root). Same entities as the
+   Homepage preview and the News page — title-only
+   presentation here. No local editable ticker list.
    ═══════════════════════════════════════════ */
-const tickerItems = [
-  { id: 1, category: 'Notice', title: 'Admission Information for [Year]' },
-  { id: 2, category: 'News', title: '[News Title Placeholder]' },
-  { id: 3, category: 'Event', title: '[School Event Placeholder]' },
-  { id: 4, category: 'Announcement', title: '[Important Announcement]' },
-  { id: 5, category: 'Notice', title: '[Exam Schedule Placeholder]' },
-];
 
 function Navbar() {
   const { settings } = useSettings();
+  const { items: publishedNews } = useNews();
   const [isOpen, setIsOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
@@ -44,6 +40,13 @@ function Navbar() {
     closeMenu();
     setOpenDropdownId(null);
   }, [location.pathname, closeMenu]);
+
+  /* Central published news for the ticker (title-only view).
+     Empty list → no news row is rendered (intentional state). */
+  const ticker = useMemo(
+    () => publishedNews.map(({ id, slug, type, title }) => ({ id, slug, type, title })),
+    [publishedNews],
+  );
 
   /* Detect reduced-motion preference */
   useEffect(() => {
@@ -506,6 +509,8 @@ function Navbar() {
         </div>
 
         {/* ═══════════ ROW 3 — LATEST NEWS TICKER ═══════════ */}
+        {/* Rendered only when published news exists (central useNews). */}
+        {ticker.length > 0 && (
         <div className="bg-forest-50/90 border-b border-forest-100">
           <div className="container-custom">
             <div className="flex items-center gap-3 h-9">
@@ -529,16 +534,18 @@ function Navbar() {
                   style={tickerTrackStyle}
                   aria-label="Latest news and notices"
                 >
-                  {[...tickerItems, ...tickerItems].map((item, index) => (
-                    <span
-                      key={`${item.id}-${index}`}
-                      className="flex items-center gap-2 whitespace-nowrap"
-                      aria-hidden={index >= tickerItems.length}
+                  {[...ticker, ...ticker].map((item, index) => (
+                    <Link
+                      key={`${item.slug}-${index}`}
+                      to={`/news/${item.slug}`}
+                      className="flex items-center gap-2 whitespace-nowrap hover:opacity-80 transition-opacity"
+                      aria-hidden={index >= ticker.length}
+                      tabIndex={index >= ticker.length ? -1 : 0}
                     >
                       <span
                         className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white ${['bg-forest-600', 'bg-charcoal-500', 'bg-gold-500', 'bg-leaf-600', 'bg-forest-600'][index % 5]}`}
                       >
-                        {item.category}
+                        {item.type}
                       </span>
                       <span className="text-[11px] text-charcoal-700 font-medium">
                         {item.title}
@@ -546,13 +553,14 @@ function Navbar() {
                       <span className="text-forest-400 text-[11px] font-bold select-none" aria-hidden="true">
                         →
                       </span>
-                    </span>
+                    </Link>
                   ))}
                 </div>
               </div>
             </div>
           </div>
         </div>
+        )}
       </nav>
 
       {/* ═══════════ MOBILE NAVIGATION (below md) ═══════════ */}

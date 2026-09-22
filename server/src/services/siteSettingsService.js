@@ -55,6 +55,10 @@ function parseStoredValue(group, field, raw) {
  * Effective settings: config fallback overlaid with DB values.
  * Throws only on unexpected errors — DB unavailability is handled
  * by the caller (getEffectiveSettings).
+ *
+ * Phase C: a legacy `contact.address` row (retired duplicate of
+ * location.address) is never merged — the central location value
+ * is the single source of truth for the school address.
  */
 async function getEffectiveSettingsStrict() {
   const effective = configFallback();
@@ -65,6 +69,7 @@ async function getEffectiveSettingsStrict() {
     if (dot === -1) continue; // defensive: malformed key never crashes
     const group = row.setting_key.slice(0, dot);
     const field = row.setting_key.slice(dot + 1);
+    if (group === 'contact' && field === 'address') continue; // retired duplicate
     if (!(group in effective)) continue; // unknown group in DB → ignore
     if (!(field in effective[group])) continue; // unknown field → ignore
     effective[group][field] = parseStoredValue(group, field, row.setting_value);

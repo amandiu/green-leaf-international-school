@@ -6,6 +6,9 @@ import LoginPage from './pages/LoginPage';
 import NavigationManagement from './pages/NavigationManagement';
 import LeadershipManagement from './pages/LeadershipManagement';
 import SiteSettings from './pages/SiteSettings';
+import HomepageManagement from './pages/HomepageManagement';
+import ContentCenter from './pages/ContentCenter';
+import NewsManagement from './pages/NewsManagement';
 
 // Placeholder page — will be built in Phase 6
 const Dashboard = ({ onLogout }) => (
@@ -52,6 +55,24 @@ const Dashboard = ({ onLogout }) => (
           <span className="block font-semibold text-charcoal-900">Site Settings</span>
           <span className="mt-1 block text-sm text-charcoal-500">
             Edit the school's global identity, contact and branding info
+          </span>
+        </Link>
+        <Link
+          to="/homepage"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Homepage</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Edit the hero, life-at-school, video showcase and CTA content
+          </span>
+        </Link>
+        <Link
+          to="/content-center"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Content Center</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Central content managed once — Location &amp; Map, Reusable Content, News &amp; Notices
           </span>
         </Link>
       </nav>
@@ -115,6 +136,30 @@ function App() {
         element={
           <AuthGate initializing={initializing} user={user}>
             <SiteSettings onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/homepage"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <HomepageManagement onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/content-center"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <ContentCenter onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/news"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <NewsManagement onUnauthorized={handleUnauthorized} />
           </AuthGate>
         }
       />
