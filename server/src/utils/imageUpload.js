@@ -1,29 +1,44 @@
 // ------------------------------------------------------------
-// Leadership image upload utility
+// Secure image upload utility (shared image-upload phase)
 //
-// Small, dependency-free secure image upload mechanism (the
-// project has no existing upload system). Security properties:
-//   - Extension whitelist: .jpg/.jpeg/.png/.webp only
-//   - Content sniffing via magic bytes (never trusts MIME header)
-//   - 5 MB size cap
-//   - Server-generated random filename — browser-supplied names
-//     are never used; path traversal is impossible by construction
-//   - Resolution strictly inside the leadership upload directory
+// ONE storage engine for all admin image uploads:
+//   - leadership portraits  → /api/uploads/leadership/<file>
+//   - generic CMS images    → /api/uploads/images/<file>
+//
+// Security properties (all enforced server-side):
+//   - Magic-byte sniffing enforces the JPEG/PNG/WebP allowlist
+//     BEFORE any storage decision (never trusts filename,
+//     extension or Content-Type).
+//   - Full sanitization/re-encoding runs through
+//     utils/imageSanitizer.js (sharp): decode → dimension limits
+//     → metadata strip → fresh WebP output. The bytes written to
+//     disk are always server-generated, never the raw upload.
+//   - Filenames are generated from Date.now(36) + 12 random
+//     bytes — browser-supplied names never reach the filesystem,
+//     so path traversal is impossible by construction.
+//   - Resolution helpers are strictly confined to their upload
+//     directory (defense in depth, checked twice).
 // ------------------------------------------------------------
 
 import { randomBytes } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
+import { sanitizeImageToWebp, UPLOAD_ERROR_CODES } from './imageSanitizer.js';
 
-/** Absolute directory where leadership portraits are stored. */
-const ROOT = resolve(process.cwd(), 'src', 'uploads', 'leadership');
+/** Absolute directory root for ALL uploaded images. */
+const ROOT = resolve(process.cwd(), 'src', 'uploads');
 
 /** Public URL prefix served by GET /api/uploads/leadership/:file. */
 export const LEADERSHIP_PUBLIC_PREFIX = '/api/uploads/leadership/';
 
 export const LEADERSHIP_UPLOAD_DIR = 'leadership';
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+/** Public URL prefix served by GET /api/uploads/images/:file. */
+export const IMAGES_PUBLIC_PREFIX = '/api/uploads/images/';
+
+export const IMAGES_UPLOAD_DIR = 'images';
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB — must match middleware/upload.js
 
 const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
 
@@ -46,9 +61,10 @@ function detectImageType(buffer) {
   return null;
 }
 
-/** Ensure the upload directory exists (called before each write). */
+/** Ensure the upload directories exist (called before each write). */
 export async function ensureUploadDirs() {
-  await mkdir(ROOT, { recursive: true });
+  await mkdir(join(ROOT, LEADERSHIP_UPLOAD_DIR), { recursive: true });
+  await mkdir(join(ROOT, IMAGES_UPLOAD_DIR), { recursive: true });
 }
 
 /** Reject files whose declared extension is not an allowed web image. */
@@ -64,7 +80,9 @@ export function assertAllowedExtension(filename) {
 /**
  * Verify a Buffer's magic bytes actually match a real image type.
  * Throws when the content is not a JPEG/PNG/WebP (e.g. an .exe
- * renamed to .jpg is rejected here regardless of extension).
+ * renamed to .jpg, or text/html renamed to .jpg, is rejected here
+ * regardless of extension). This is the cheap pre-check; sharp
+ * decoding in imageSanitizer.js is the authoritative validation.
  */
 export function assertRealImage(buffer) {
   const type = detectImageType(buffer);
@@ -75,58 +93,136 @@ export function assertRealImage(buffer) {
 }
 
 /**
- * Store an uploaded image buffer.
- * Returns the public-safe relative URL (never a filesystem path).
- * The filename is generated server-side from random bytes.
+ * Server-generated safe filename. The original filename NEVER
+ * becomes the storage path — no separators, no traversal, only
+ * [0-9a-z] plus a single dot before the extension.
  */
-export async function saveLeadershipImage(buffer) {
+function generateFilename(extension) {
+  return `${Date.now().toString(36)}-${randomBytes(12).toString('hex')}.${extension}`;
+}
+
+/**
+ * Shared storage step: sanitize + re-encode via sharp, then write
+ * the server-generated WebP into the given upload subdirectory.
+ * Returns { publicUrl, bytes, width, height }.
+ */
+async function storeSanitizedImage(buffer, uploadDir, publicPrefix) {
   if (!Buffer.isBuffer(buffer)) {
     throw new Error('Image payload must be raw file bytes');
   }
   if (buffer.length === 0) {
-    throw new Error('Uploaded image is empty');
+    const err = new Error('No image file was received.');
+    err.code = UPLOAD_ERROR_CODES.NO_FILE;
+    throw err;
   }
   if (buffer.length > MAX_FILE_BYTES) {
-    throw new Error('Image must be 5 MB or smaller');
+    const err = new Error('Image must be 10 MB or smaller.');
+    err.code = UPLOAD_ERROR_CODES.INVALID;
+    throw err;
   }
 
-  const type = assertRealImage(buffer);
+  // 1. Cheap allowlist gate (magic bytes) — rejects SVG, GIF, ICO,
+  //    HTML, executables, and every other non-allowed format.
+  assertRealImage(buffer);
+
+  // 2. Authoritative validation + sanitization (sharp): decode with
+  //    pixel limits, enforce dimensions, strip metadata, re-encode.
+  const sanitized = await sanitizeImageToWebp(buffer);
+
+  // 3. Store ONLY the freshly generated bytes under a server-
+  //    generated name inside the managed directory.
   await ensureUploadDirs();
+  const filename = generateFilename(sanitized.format);
+  // Resolution stays inside the directory by construction: the
+  // filename contains only [0-9a-z.-] — no separators, no traversal.
+  const target = join(ROOT, uploadDir, filename);
+  await writeFile(target, sanitized.data);
 
-  const filename = `${Date.now().toString(36)}-${randomBytes(12).toString('hex')}.${type}`;
-  // Resolution stays inside ROOT by construction: filename contains
-  // only [0-9a-z.-] generated above — no separators, no traversal.
-  const target = join(ROOT, filename);
+  return {
+    publicUrl: `${publicPrefix}${filename}`,
+    bytes: sanitized.data.length,
+    width: sanitized.width,
+    height: sanitized.height,
+  };
+}
 
-  await writeFile(target, buffer);
-  return `${LEADERSHIP_PUBLIC_PREFIX}${filename}`;
+/**
+ * Store a generic CMS image (news, homepage, branding, …).
+ * Returns the public-safe relative URL (never a filesystem path).
+ */
+export async function saveImage(buffer) {
+  const stored = await storeSanitizedImage(buffer, IMAGES_UPLOAD_DIR, IMAGES_PUBLIC_PREFIX);
+  return stored;
+}
+
+/**
+ * Store a leadership portrait (backward-compatible entry point —
+ * same signature and return shape as the original implementation;
+ * the stored image is now sanitized/re-encoded instead of raw).
+ */
+export async function saveLeadershipImage(buffer) {
+  const stored = await storeSanitizedImage(
+    buffer,
+    LEADERSHIP_UPLOAD_DIR,
+    LEADERSHIP_PUBLIC_PREFIX,
+  );
+  return stored.publicUrl;
 }
 
 /**
  * Map a public image URL back to its absolute file path, strictly
- * confined to the leadership upload directory. Returns null for
- * anything that is not a leadership upload path.
+ * confined to the given managed upload directory. Returns null for
+ * anything that is not a managed upload path.
  */
-export function resolveImagePath(imageUrl) {
-  if (typeof imageUrl !== 'string' || !imageUrl.startsWith(LEADERSHIP_PUBLIC_PREFIX)) {
+function resolveManagedPath(imageUrl, publicPrefix, dir) {
+  if (typeof imageUrl !== 'string' || !imageUrl.startsWith(publicPrefix)) {
     return null;
   }
-  const filename = imageUrl.slice(LEADERSHIP_PUBLIC_PREFIX.length);
+  const filename = imageUrl.slice(publicPrefix.length);
   // Only plain filenames are accepted — no slashes, no "..", no null bytes.
   if (!/^[A-Za-z0-9._-]+$/.test(filename) || filename.includes('..')) {
     return null;
   }
-  const target = join(ROOT, filename);
-  // Defense in depth: the resolved path must stay inside ROOT.
-  if (!resolve(target).startsWith(ROOT + sep) && resolve(target) !== ROOT) {
+  const dirRoot = join(ROOT, dir);
+  const target = join(dirRoot, filename);
+  // Defense in depth: the resolved path must stay inside the dir.
+  if (!resolve(target).startsWith(dirRoot + sep) && resolve(target) !== dirRoot) {
     return null;
   }
   return target;
 }
 
-/** Delete an uploaded image; missing files are treated as success. */
+/** Leadership-specific resolver (existing consumers). */
+export function resolveImagePath(imageUrl) {
+  return resolveManagedPath(imageUrl, LEADERSHIP_PUBLIC_PREFIX, LEADERSHIP_UPLOAD_DIR);
+}
+
+/** Generic-images resolver (orphan handling). */
+export function resolveGenericImagePath(imageUrl) {
+  return resolveManagedPath(imageUrl, IMAGES_PUBLIC_PREFIX, IMAGES_UPLOAD_DIR);
+}
+
+/** Delete an uploaded leadership image; missing files count as success. */
 export async function deleteUploadedImage(imageUrl) {
   const target = resolveImagePath(imageUrl);
+  if (!target) return false; // not a managed path — never touch disk
+  try {
+    await unlink(target);
+    return true;
+  } catch (err) {
+    if (err.code === 'ENOENT') return true; // already gone
+    throw err;
+  }
+}
+
+/**
+ * Delete a generic managed image. Only files under the images
+ * directory can ever be removed — other paths (including legacy
+ * /Activity/... site assets) are refused. Missing files count as
+ * success (idempotent cleanup).
+ */
+export async function deleteGenericImage(imageUrl) {
+  const target = resolveGenericImagePath(imageUrl);
   if (!target) return false; // not a managed path — never touch disk
   try {
     await unlink(target);

@@ -20,6 +20,7 @@ import {
   deleteNewsItem,
 } from '../services/newsService';
 import { Alert, Loader } from '../components/Feedback';
+import ImageUploader from '../components/ImageUploader';
 
 const TYPES = ['NEWS', 'NOTICE', 'EVENT', 'ANNOUNCEMENT'];
 const STATUS_LABEL = {
@@ -204,21 +205,12 @@ function NewsForm({ initial, onSaved, onCancel, onUnauthorized }) {
         </div>
 
         <div className="sm:col-span-2">
-          <label className={labelClass} htmlFor="news-image">
-            Image (optional)
-          </label>
-          <input
-            id="news-image"
-            className={inputClass}
+          <ImageUploader
+            label="Image (optional)"
             value={values.image}
-            onChange={(e) => setField('image', e.target.value)}
-            maxLength={500}
-            placeholder="/Activity/photo.jpg or https://…"
+            onChange={(v) => setField('image', v)}
+            hint="Leave empty for a branded placeholder."
           />
-          <p className="mt-1 text-xs text-charcoal-400">
-            Site-relative path (existing /Activity/… files) or an https image
-            URL. Leave empty for a branded placeholder.
-          </p>
         </div>
 
         {isEdit && (

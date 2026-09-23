@@ -22,11 +22,34 @@ import {
   findPublished, findPublishedBySlug, findAllAdmin, findById,
   countSlug, insert, update, updateStatus, remove,
 } from '../models/NewsItem.js';
+import pool from '../config/db.js';
 import {
   validateNewsPayload, validateStatusPayload,
   validateType, validateStatus,
 } from '../validators/newsValidation.js';
 import { notFound } from '../utils/errors.js';
+import { deleteGenericImage } from '../utils/imageUpload.js';
+
+/**
+ * Orphan-safe image cleanup (shared image-upload phase). An old
+ * generic upload path is deleted from disk ONLY after confirming
+ * no other news row still references it. Legacy paths (e.g.
+ * /Activity/…) resolve to null → never touched. Deletion failures
+ * never fail the request — the row update is what matters.
+ */
+async function cleanupNewsImageIfUnused(oldImage, replacementImage) {
+  if (!oldImage || oldImage === replacementImage) return;
+  if (!String(oldImage).startsWith('/api/uploads/images/')) return;
+  try {
+    const [rows] = await pool
+      .query('SELECT `image` FROM `news_items` WHERE `image` = ? LIMIT 1', [oldImage]);
+    if (rows.length === 0) {
+      await deleteGenericImage(oldImage);
+    }
+  } catch (err) {
+    console.error('News image cleanup failed:', err?.message || err);
+  }
+}
 
 /** Fallback for the homepage preview heading (never throws). */
 const DEFAULT_NEWS_PREVIEW = Object.freeze({
@@ -157,14 +180,16 @@ export async function updateNewsItem(id, input) {
     slug = await uniqueSlug(clean.slug, id);
   }
 
+  const nextImage = clean.image !== undefined ? clean.image : existing.image;
   await update(id, {
     title: clean.title ?? existing.title,
     slug,
     type: clean.type ?? existing.type,
     excerpt: clean.excerpt !== undefined ? clean.excerpt : existing.excerpt,
     content: clean.content !== undefined ? clean.content : existing.content,
-    image: clean.image !== undefined ? clean.image : existing.image,
+    image: nextImage,
   });
+  await cleanupNewsImageIfUnused(existing.image, nextImage);
   return getAdminNewsById(id);
 }
 
@@ -193,6 +218,7 @@ export async function deleteNewsItem(id) {
   const existing = await findById(id);
   if (!existing) throw notFound(`News item ${id} not found`);
   await remove(id);
+  await cleanupNewsImageIfUnused(existing.image, null);
   return { deleted: existing.slug };
 }
 

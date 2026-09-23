@@ -8,8 +8,9 @@
 // 401/503 session-drop convention. Repeatable entries (hero slides,
 // life images, video slides) are edited as validated arrays with
 // move up/down ordering; add/remove edits the array (server schema
-// allows 1..N). Image fields accept paths/URLs only — media
-// management is Phase E.
+// allows 1..N). Image fields use the shared secure ImageUploader
+// (server-sanitized uploads under /api/uploads/images/); existing
+// stored paths/URLs keep rendering untouched.
 // ------------------------------------------------------------
 
 import { useCallback, useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import {
   updateHomeSection,
 } from '../services/homeContentService';
 import { Alert, Loader } from '../components/Feedback';
+import ImageUploader from '../components/ImageUploader';
 
 /* ---------- field primitives (shared styling) ---------- */
 
@@ -173,6 +175,15 @@ function ArrayEditor({
                       placeholder={field.placeholder}
                     />
                   </div>
+                ) : field.type === 'image' ? (
+                  <div key={field.name} className="sm:col-span-2">
+                    <ImageUploader
+                      label={field.label}
+                      required={field.required}
+                      value={item[field.name] || ''}
+                      onChange={(v) => update(index, field.name, v)}
+                    />
+                  </div>
                 ) : (
                   <TextField
                     key={field.name}
@@ -309,8 +320,8 @@ export default function HomepageManagement({ onUnauthorized }) {
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-forest-700">Homepage</h1>
         <p className="mt-1 text-sm text-charcoal-500">
-          Edit the public Homepage content. Changes appear on the next public page load. Image fields accept
-          site-relative paths (e.g. /Hero Section/hero 1.jpg) or https:// URLs — uploads arrive in Phase E.
+          Edit the public Homepage content. Changes appear on the next public page load. Image fields use
+          the secure uploader (existing stored paths keep working).
         </p>
       </div>
 
@@ -356,7 +367,7 @@ export default function HomepageManagement({ onUnauthorized }) {
                   <p className="truncate font-mono text-xs text-charcoal-500">{item.src}</p>
                 )}
                 fields={[
-                  { name: 'src', label: 'Image Path/URL', maxLength: 500, required: true, placeholder: ASSET_PLACEHOLDER },
+                  { name: 'src', label: 'Slide Image', type: 'image', required: true },
                   { name: 'alt', label: 'Alt Text', maxLength: 500, required: true },
                 ]}
               />
@@ -411,7 +422,7 @@ export default function HomepageManagement({ onUnauthorized }) {
                   <p className="truncate font-mono text-xs text-charcoal-500">{item.src}</p>
                 )}
                 fields={[
-                  { name: 'src', label: 'Image Path/URL', maxLength: 500, required: true, placeholder: ASSET_PLACEHOLDER },
+                  { name: 'src', label: 'Grid Image', type: 'image', required: true },
                   { name: 'alt', label: 'Alt Text', maxLength: 500, required: true },
                 ]}
               />
@@ -450,7 +461,7 @@ export default function HomepageManagement({ onUnauthorized }) {
                   { name: 'title', label: 'Title', maxLength: 200, required: true },
                   { name: 'description', label: 'Description', type: 'textarea', maxLength: 1000 },
                   { name: 'videoUrl', label: 'Video URL', maxLength: 500, placeholder: '{{social.youtube}} or https://…' },
-                  { name: 'thumbnail', label: 'Thumbnail Path/URL', maxLength: 500, required: true, placeholder: ASSET_PLACEHOLDER },
+                  { name: 'thumbnail', label: 'Video Thumbnail', type: 'image', required: true },
                   { name: 'buttonText', label: 'CTA Text', maxLength: 100, required: true },
                   { name: 'metadata', label: 'Metadata (comma-separated)', type: 'metadata', placeholder: 'Campus, Student Life' },
                 ]}

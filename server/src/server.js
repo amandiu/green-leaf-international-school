@@ -106,6 +106,11 @@ app.use('/api/admin/leadership-section', leadershipSectionAdmin);
 import uploadsRoutes from './routes/uploadsRoutes.js';
 app.use('/api/uploads', uploadsRoutes);
 
+// Centralized admin image uploads (secure upload phase): adminAuth-gated
+// POST /api/admin/uploads/image + dedicated upload rate limiter.
+import adminUploadRoutes from './routes/adminUploadRoutes.js';
+app.use('/api/admin/uploads', adminUploadRoutes);
+
 // Site settings (Phase A): public read + adminAuth-gated read/write.
 import settingsRoutes, { adminSettingsRouter } from './routes/settingsRoutes.js';
 app.use('/api/settings', settingsRoutes);

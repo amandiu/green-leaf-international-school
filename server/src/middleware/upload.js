@@ -1,18 +1,19 @@
 // ------------------------------------------------------------
-// Raw-body upload middleware for leadership images
+// Raw-body upload middleware (shared image-upload phase)
 //
-// Deliberately minimal (no multer — the project has no upload
-// middleware yet and this keeps dependencies at zero):
+// Shared by EVERY admin image upload (leadership portraits AND
+// the generic /api/admin/uploads/image endpoint):
 //   - Accepts a single multipart/form-data part named "image"
 //     OR a raw application/octet-stream body
-//   - Enforces the 5 MB cap while streaming (rejects early)
-//   - Hands a Buffer to the service; filename from the browser
-//     is used ONLY for the extension check, never for storage
+//   - Enforces the 10 MB cap while streaming (rejects early,
+//     before expensive image processing starts)
+//   - Hands a Buffer to the service; the filename from the
+//     browser is never used for storage (server-generated only)
 // ------------------------------------------------------------
 
 import { badRequest } from '../utils/errors.js';
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024; // must match utils/imageUpload.js
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // must match utils/imageUpload.js + imageSanitizer.js
 
 /** Collect the request body as a Buffer with a hard size cap. */
 export function readImageUpload(req, res, next) {
@@ -31,7 +32,7 @@ export function readImageUpload(req, res, next) {
   if (declaredLength > MAX_FILE_BYTES) {
     return res.status(413).json({
       success: false,
-      message: 'Image must be 5 MB or smaller.',
+      message: 'Image is too large. Maximum allowed size is 10 MB.',
     });
   }
 
@@ -46,7 +47,7 @@ export function readImageUpload(req, res, next) {
       aborted = true;
       res.status(413).json({
         success: false,
-        message: 'Image must be 5 MB or smaller.',
+        message: 'Image is too large. Maximum allowed size is 10 MB.',
       });
       req.destroy(); // stop reading the rest of the upload
       return;
@@ -98,6 +99,8 @@ export function readImageUpload(req, res, next) {
  * Pull the first form part out of a multipart body. This is a
  * minimal, best-effort parser for the single-file case only —
  * adequate for this endpoint and never used for other content.
+ * The filename is carried for diagnostics only; it is NEVER used
+ * for storage (server-generated filenames only).
  */
 function extractMultipartFile(buffer, contentType) {
   const boundaryMatch = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);

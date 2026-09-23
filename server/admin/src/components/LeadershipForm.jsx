@@ -29,7 +29,7 @@ const EMPTY = {
 const NAME_MAX = 120;
 const TITLE_MAX = 160;
 const MESSAGE_MAX = 5000;
-const MAX_IMAGE_MB = 5;
+const MAX_IMAGE_MB = 10;
 const IMAGE_RE = /^\/api\/uploads\/leadership\/[A-Za-z0-9._-]+$/;
 
 /** Build the form's initial values from a record (edit) or blank (create). */

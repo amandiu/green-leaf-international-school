@@ -21,6 +21,7 @@ import {
   updateLeadershipSection,
 } from '../services/leadershipService.js';
 import { saveLeadershipImage } from '../utils/imageUpload.js';
+import { UPLOAD_ERROR_CODES } from '../utils/imageSanitizer.js';
 import { HttpError } from '../utils/errors.js';
 
 /** Map service errors to responses; log everything else safely. */
@@ -234,10 +235,23 @@ export async function uploadLeadershipImage(req, res) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ success: false, message: err.message });
     }
-    // Validation messages from the upload utility are safe to show.
+    // Coded sanitizer/validation errors map to safe 400 messages.
+    const code = err?.code;
+    if (code && Object.values(UPLOAD_ERROR_CODES).includes(code)) {
+      const SAFE = {
+        [UPLOAD_ERROR_CODES.NO_FILE]: 'No image file was received.',
+        [UPLOAD_ERROR_CODES.INVALID]: 'Uploaded file is not a valid JPEG, PNG or WebP image.',
+        [UPLOAD_ERROR_CODES.DIMENSIONS]: 'Image dimensions exceed the maximum allowed size.',
+        [UPLOAD_ERROR_CODES.TIMEOUT]: 'Image processing took too long. Try a smaller image.',
+        [UPLOAD_ERROR_CODES.PROCESSING]: 'Image processing failed.',
+      };
+      return res.status(400).json({ success: false, message: SAFE[code] });
+    }
+    // The legacy magic-byte/extension guards throw plain Errors with
+    // safe, human-readable messages — surface those as 400 too.
     const safe =
       typeof err?.message === 'string'
-      && /image|file|5 MB|jpeg|png|webp/i.test(err.message);
+      && /image|file|10 MB|jpeg|png|webp/i.test(err.message);
     if (safe) {
       return res.status(400).json({ success: false, message: err.message });
     }

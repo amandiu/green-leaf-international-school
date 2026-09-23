@@ -6,8 +6,9 @@
 // GET/PUT /api/admin/settings. Architecture mirrors
 // NavigationManagement/LeadershipManagement: section cards +
 // shared Alert/Loader primitives + the 401/503 session-drop
-// convention. Image fields (logo/favicon/ogImage) accept existing
-// valid paths/URLs only — actual media management is Phase E.
+// convention. Logo and OG Image use the shared secure ImageUploader;
+// the favicon stays a manual path/URL field (browsers require SVG/ICO
+// favicons, which the JPG/PNG/WebP upload pipeline cannot produce).
 //
 // Phase C: the Location group moved to Admin → Content Center
 // (Location & Map is central content used by multiple pages and
@@ -21,6 +22,7 @@ import {
   updateAdminSettings,
 } from '../services/settingsService';
 import { Alert, Loader } from '../components/Feedback';
+import ImageUploader from '../components/ImageUploader';
 
 /** Field definitions per section — order drives the form layout. */
 const SECTIONS = [
@@ -41,11 +43,11 @@ const SECTIONS = [
     group: 'branding',
     title: 'Branding',
     description:
-      'Site-relative path (e.g. /logo.jpg) or a full https:// URL. Actual media management arrives in Phase E.',
+      'Logo and OG Image use the secure uploader. Favicon stays a manual path/URL (browsers require SVG/ICO favicons, which the JPG/PNG/WebP upload pipeline cannot produce).',
     fields: [
-      { name: 'logo', label: 'Logo', type: 'text', maxLength: 500, required: true, asset: true },
+      { name: 'logo', label: 'Logo', kind: 'image', required: true },
       { name: 'favicon', label: 'Favicon', type: 'text', maxLength: 500, required: true, asset: true },
-      { name: 'ogImage', label: 'OG Image', type: 'text', maxLength: 500, required: true, asset: true },
+      { name: 'ogImage', label: 'OG Image', kind: 'image', required: true },
     ],
   },
   {
@@ -96,7 +98,19 @@ function SettingsSectionCard({ section, values, onChange }) {
       <p className="mt-1 text-xs text-charcoal-500">{section.description}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {section.fields.map((field) => (
-          <div key={field.name} className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
+          <div
+            key={field.name}
+            className={field.type === 'textarea' || field.kind === 'image' ? 'sm:col-span-2' : ''}
+          >
+            {field.kind === 'image' ? (
+              <ImageUploader
+                label={field.label}
+                required={field.required}
+                value={values[field.name] ?? ''}
+                onChange={(v) => onChange(section.group, field.name, v)}
+              />
+            ) : (
+            <>
             <label htmlFor={`ss-${section.group}-${field.name}`} className={labelClass}>
               {field.label}
               {field.required && <span className="ml-1 text-red-500" aria-hidden="true">*</span>}
@@ -123,6 +137,8 @@ function SettingsSectionCard({ section, values, onChange }) {
                 onChange={(e) => onChange(section.group, field.name, e.target.value)}
                 placeholder={field.asset ? '/logo.jpg or https://…' : undefined}
               />
+            )}
+            </>
             )}
           </div>
         ))}
