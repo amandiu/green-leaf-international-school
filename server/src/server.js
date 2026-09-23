@@ -49,9 +49,15 @@ app.use(attachSessionUser);
 app.use(jsonBodyErrorHandler);
 
 // Rate limiting
+// Global API limiter: 100 requests / 15 min per IP. /api/auth/login is
+// EXEMPT here — it carries its own much stricter limiter (10 attempts /
+// 10 min, see routes/authRoutes.js) and sits behind the same page-load
+// traffic as everything else, so counting page-load data fetches
+// against it was locking the admin out of login entirely.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
+  skip: (req) => req.originalUrl.split('?')[0] === '/api/auth/login',
   message: { success: false, message: 'Too many requests, please try again later.' },
 });
 app.use('/api/', limiter);
