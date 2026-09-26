@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { siteConfig } from '../../../shared/config/siteConfig';
 import useAdminAuth from './hooks/useAdminAuth';
@@ -87,9 +88,13 @@ function App() {
   const isLoginPage = location.pathname === '/login';
 
   // Shared lock handler: 401/503 from any page drops the session.
-  const handleUnauthorized = () => {
+  // useCallback keeps the identity stable across renders — pages put
+  // this in their load-effect dependency arrays, and a new function
+  // identity on every parent render used to re-run those effects,
+  // re-fetching data the API rate limiter then had to absorb.
+  const handleUnauthorized = useCallback(() => {
     if (user) logout();
-  };
+  }, [user, logout]);
 
   // While /api/auth/me resolves, render nothing to avoid a
   // redirect flash on refresh.

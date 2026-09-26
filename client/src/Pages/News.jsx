@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { siteConfig } from '../../../shared/config/siteConfig';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useMarqueeClone } from '../hooks/useMarqueeClone';
 import { useNews } from '../hooks/useNews';
 import { SectionWrapper } from '../Components/ui/SectionWrapper';
 import { Card, CardBadge } from '../Components/ui/Card';
@@ -138,6 +139,33 @@ function News() {
   const [prefersReduced, setPrefersReduced] = useState(false);
   const { items: news, status } = useNews();
 
+  /* Loop guard: the ticker animation slides the track by -50%, which
+     is only seamless when one copy fills the viewport. With few items
+     both copies would sit on screen at once — every card visible
+     twice. Clone (and animate) ONLY when one copy is narrower than
+     the viewport; until then the carousel is a static row. */
+  const marquee = useMarqueeClone({
+    enabled: !showAll && !prefersReduced,
+    animation: {
+      animation: 'newsTicker 35s linear infinite',
+      width: 'max-content',
+    },
+  });
+  const carouselStyle = prefersReduced
+    ? {
+        overflowX: 'auto',
+        scrollSnapType: 'x mandatory',
+        WebkitOverflowScrolling: 'touch',
+      }
+    : {
+        /* Always content-sized: the clone guard measures this
+           track's extent — and the original layout had max-content
+           here in both animated and static states. */
+        width: 'max-content',
+        ...(marquee.trackStyle ?? {}),
+      };
+  const carouselNews = marquee.clone ? [...news, ...news] : news;
+
   useEffect(() => {
     setPrefersReduced(
       window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -151,7 +179,6 @@ function News() {
 
   const toggleShowAll = useCallback(() => setShowAll((prev) => !prev), []);
 
-  const duplicatedNews = [...news, ...news];
   const isLoading = status === 'loading';
   const isEmpty = !isLoading && news.length === 0;
 
@@ -204,7 +231,8 @@ function News() {
         {/* ── MODE A: Horizontal Animated Showcase ── */}
         {!showAll && news.length > 0 && (
           <div
-            className="overflow-hidden"
+            ref={marquee.viewportRef}
+            className="overflow-hidden relative"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onFocus={handleFocusIn}
@@ -212,27 +240,20 @@ function News() {
             aria-label="Recent news carousel"
           >
             <div
-              ref={articlesRef}
+              ref={(node) => {
+                articlesRef.current = node;
+                marquee.contentRef(node);
+              }}
               className="flex gap-6"
-              style={
-                prefersReduced
-                  ? {
-                      overflowX: 'auto',
-                      scrollSnapType: 'x mandatory',
-                      WebkitOverflowScrolling: 'touch',
-                    }
-                  : {
-                      animation: 'newsTicker 35s linear infinite',
-                      animationPlayState: isPaused ? 'paused' : 'running',
-                      width: 'max-content',
-                    }
-              }
+              style={isPaused && carouselStyle?.animation
+                ? { ...carouselStyle, animationPlayState: 'paused' }
+                : carouselStyle}
             >
-              {duplicatedNews.map((article, index) => (
+              {carouselNews.map((article, index) => (
                 <div
-                  key={`${article.slug}-${index}`}
+                  key={marquee.clone ? `${article.slug}-${index}` : article.slug}
                   className="flex-shrink-0 w-[300px] md:w-[340px]"
-                  aria-hidden={index >= news.length}
+                  aria-hidden={index >= news.length || undefined}
                 >
                   <NewsCard article={article} />
                 </div>

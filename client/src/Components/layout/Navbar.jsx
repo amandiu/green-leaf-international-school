@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import useNavigation from '../../hooks/useNavigation';
 import { useSettings } from '../../context/SettingsContext';
 import { useNews } from '../../hooks/useNews';
+import { useMarqueeClone } from '../../hooks/useMarqueeClone';
 import BrandBlock from '../ui/BrandBlock';
 
 /* ═══════════════════════════════════════════
@@ -48,6 +49,20 @@ function Navbar() {
     [publishedNews],
   );
 
+  /* Loop guard: the ticker animation slides the track by -50%, which
+     is only seamless when one copy of the titles fills the bar. With
+     few published items both copies sat on screen at once — every
+     title visible twice. Clone (and animate) ONLY when one copy is
+     narrower than the ticker viewport; until then the titles sit
+     still, each shown exactly once. */
+  const marquee = useMarqueeClone({
+    animation: {
+      animation: 'newsTicker 35s linear infinite',
+      animationPlayState: isPaused ? 'paused' : 'running',
+      width: 'max-content',
+    },
+  });
+
   /* Detect reduced-motion preference */
   useEffect(() => {
     setPrefersReduced(
@@ -79,12 +94,8 @@ function Navbar() {
             overflowX: 'auto',
             WebkitOverflowScrolling: 'touch',
           }
-        : {
-            width: 'max-content',
-            animation: 'newsTicker 35s linear infinite',
-            animationPlayState: isPaused ? 'paused' : 'running',
-          },
-    [prefersReduced, isPaused],
+        : marquee.trackStyle,
+    [prefersReduced, marquee.trackStyle],
   );
 
   /* ---- Desktop dropdown state (Phase 3.5) ----
@@ -521,6 +532,7 @@ function Navbar() {
 
               {/* Ticker viewport — moving content is clipped here only */}
               <div
+                ref={marquee.viewportRef}
                 className="relative flex-1 min-w-0 overflow-hidden"
                 onMouseEnter={pauseTicker}
                 onMouseLeave={resumeTicker}
@@ -530,17 +542,18 @@ function Navbar() {
                 }}
               >
                 <div
+                  ref={marquee.contentRef}
                   className="flex items-center gap-8 w-max"
                   style={tickerTrackStyle}
                   aria-label="Latest news and notices"
                 >
-                  {[...ticker, ...ticker].map((item, index) => (
+                  {(marquee.clone ? [...ticker, ...ticker] : ticker).map((item, index) => (
                     <Link
-                      key={`${item.slug}-${index}`}
+                      key={marquee.clone ? `${item.slug}-${index}` : item.slug}
                       to={`/news/${item.slug}`}
                       className="flex items-center gap-2 whitespace-nowrap hover:opacity-80 transition-opacity"
-                      aria-hidden={index >= ticker.length}
-                      tabIndex={index >= ticker.length ? -1 : 0}
+                      aria-hidden={marquee.clone && index >= ticker.length ? true : undefined}
+                      tabIndex={marquee.clone && index >= ticker.length ? -1 : 0}
                     >
                       <span
                         className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white ${['bg-forest-600', 'bg-charcoal-500', 'bg-gold-500', 'bg-leaf-600', 'bg-forest-600'][index % 5]}`}

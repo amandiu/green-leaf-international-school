@@ -17,6 +17,16 @@ if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust the first local proxy hop (Vite dev proxy / cloudflared) so
+// req.ip is the REAL client address instead of 127.0.0.1. Without
+// this every browser — admin, public visitor, tunnel user — shared
+// one rate-limit bucket keyed on the proxy's loopback address, which
+// randomly throttled legitimate admin work (HTTP 429) whenever any
+// other consumer drained the shared counter. '1' (not `true`) keeps
+// express-rate-limit's permissive-trust-proxy validation happy and
+// means only a directly-connected local proxy can influence req.ip.
+app.set('trust proxy', 1);
+
 // --------------- Middleware ---------------
 import { attachSessionUser, jsonBodyErrorHandler } from './middleware/sessionAuth.js';
 
@@ -48,16 +58,30 @@ app.use(cookieParser());
 app.use(attachSessionUser);
 app.use(jsonBodyErrorHandler);
 
-// Rate limiting
-// Global API limiter: 100 requests / 15 min per IP. /api/auth/login is
-// EXEMPT here — it carries its own much stricter limiter (10 attempts /
-// 10 min, see routes/authRoutes.js) and sits behind the same page-load
-// traffic as everything else, so counting page-load data fetches
-// against it was locking the admin out of login entirely.
+// Rate limiting (global API limiter)
+//
+// Bucket key: the AUTHENTICATED ADMIN IDENTITY when a valid session
+// cookie is present, otherwise the real client IP (after trust proxy).
+// Before this, the key was always 127.0.0.1 behind the local proxies,
+// so public visitors, admin work and bots drained ONE shared counter
+// and legitimate admin page loads randomly received 429.
+//
+// /api/auth/login is EXEMPT here — it carries its own much stricter
+// limiter (10 attempts / 10 min, see routes/authRoutes.js) and sits
+// behind the same page-load traffic as everything else, so counting
+// page-load data fetches against it was locking the admin out of
+// login entirely.
+//
+// draft-7 standard headers add Retry-After so a real 429 can show a
+// meaningful countdown instead of a generic error (Phase 6).
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 600, // authenticated admin work + page-load bursts stay well clear
   skip: (req) => req.originalUrl.split('?')[0] === '/api/auth/login',
+  keyGenerator: (req) =>
+    req.adminUser?.id ? `user:${req.adminUser.id}` : `ip:${req.ip}`,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
 });
 app.use('/api/', limiter);

@@ -38,7 +38,19 @@ export function NewsProvider({ children }) {
     getPublishedNews()
       .then((data) => {
         if (cancelled) return;
-        setItems(Array.isArray(data) ? data : []);
+        /* Canonical-source safety net: keep exactly one record per
+           item id, in API order (newest first). Id-based — never
+           title-based (two legitimate items may share a title).
+           Combined with replace-state, no consumer can ever receive
+           the same record twice. */
+        const list = Array.isArray(data) ? data : [];
+        const seenIds = new Set();
+        setItems(list.filter((item) => {
+          if (item?.id == null) return true;
+          if (seenIds.has(item.id)) return false;
+          seenIds.add(item.id);
+          return true;
+        }));
         setStatus('ready');
       })
       .catch((err) => {
