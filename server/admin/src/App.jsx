@@ -10,6 +10,10 @@ import SiteSettings from './pages/SiteSettings';
 import HomepageManagement from './pages/HomepageManagement';
 import ContentCenter from './pages/ContentCenter';
 import NewsManagement from './pages/NewsManagement';
+import ContactInbox from './pages/ContactInbox';
+import GalleryManagement from './pages/GalleryManagement';
+import PageContentManagement from './pages/PageContentManagement';
+import DownloadsManagement from './pages/DownloadsManagement';
 
 // Placeholder page — will be built in Phase 6
 const Dashboard = ({ onLogout }) => (
@@ -74,6 +78,60 @@ const Dashboard = ({ onLogout }) => (
           <span className="block font-semibold text-charcoal-900">Content Center</span>
           <span className="mt-1 block text-sm text-charcoal-500">
             Central content managed once — Location &amp; Map, Reusable Content, News &amp; Notices
+          </span>
+        </Link>
+        <Link
+          to="/contact-inbox"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Contact Inbox</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Messages from the public Contact form — mark read, replied or archived
+          </span>
+        </Link>
+        <Link
+          to="/gallery"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Gallery</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Manage the public photo gallery shown on the Campus page
+          </span>
+        </Link>
+        <Link
+          to="/downloads"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Downloads</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Manage public PDF documents — prospectus, forms, syllabus, circulars
+          </span>
+        </Link>
+        <Link
+          to="/about-page"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">About Page</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Edit the About page story, core values and vision &amp; mission
+          </span>
+        </Link>
+        <Link
+          to="/academics-page"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Academics Page</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Edit the Academics overview, programs, environment and CTA content
+          </span>
+        </Link>
+        <Link
+          to="/campus-page"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Campus Page</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Edit the Campus overview and facilities (photos stay in the Gallery module)
           </span>
         </Link>
       </nav>
@@ -165,6 +223,56 @@ function App() {
         element={
           <AuthGate initializing={initializing} user={user}>
             <NewsManagement onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/contact-inbox"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <ContactInbox onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/gallery"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <GalleryManagement onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      {/* Phase B.3: DB-backed informational pages (page_sections) —
+          one generic editor, three page identifiers. */}
+      <Route
+        path="/downloads"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <DownloadsManagement onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/about-page"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <PageContentManagement page="about" onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/academics-page"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <PageContentManagement page="academics" onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/campus-page"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <PageContentManagement page="campus" onUnauthorized={handleUnauthorized} />
           </AuthGate>
         }
       />

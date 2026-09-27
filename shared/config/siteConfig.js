@@ -87,6 +87,13 @@ export const siteConfig = {
       'Green Leaf International School & College — Nurturing Minds, Growing Futures',
     /** Admin panel browser title suffix (e.g. "<name> Admin"). */
     adminTitle: 'Green Leaf Admin',
+    /**
+     * Canonical public origin (Phase B.7 SEO). Prefer the SITE_URL
+     * env var (server-side); this config value is the last-resort
+     * fallback shared by sitemap/robots/canonicals. null → SEO
+     * files omit origin-dependent values (no fake URLs).
+     */
+    siteUrl: null,
   },
 
   /** API identity (health endpoint message, startup logs). */

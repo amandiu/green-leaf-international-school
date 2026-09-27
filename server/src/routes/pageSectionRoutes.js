@@ -1,32 +1,36 @@
 // ------------------------------------------------------------
-// Page section routes (Phase B)
+// Page section routes (Phase B + B.3)
 //
-// Public:  GET /api/pages/home                   (effective home content)
-// Admin:   GET /api/admin/pages/home             (adminAuth-gated)
-//          PUT /api/admin/pages/home/sections/:key
+// Public:  GET /api/pages/:page                  (effective page content)
+// Admin:   GET /api/admin/pages/:page            (adminAuth-gated)
+//          PUT /api/admin/pages/:page/sections/:key
+//
+// Phase B.3: the fixed '/home' routes were generalized to any
+// page with a validated section schema ('home' | 'about' |
+// 'academics' | 'campus'). Controllers 404 unknown pages/section
+// keys — there is NO generic CRUD surface for arbitrary
+// pages/sections.
 //
 // The admin router reuses the project's adminAuth middleware
 // (session-cookie auth — see middleware/sessionAuth.js). No new
-// authentication mechanism is introduced. Only the validated
-// 'home' page + known section keys are served/written — no
-// generic CRUD surface for arbitrary pages/sections.
+// authentication mechanism is introduced.
 // ------------------------------------------------------------
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
 import {
-  getPublicHome,
-  getAdminHome,
-  putHomeSection,
+  getPublicPage,
+  getAdminPage,
+  putPageSection,
 } from '../controllers/pageSectionController.js';
 
 const router = Router();
-router.get('/home', getPublicHome);
+router.get('/:page', getPublicPage);
 
 const adminRouter = Router();
 adminRouter.use(adminAuth);
-adminRouter.get('/home', getAdminHome);
-adminRouter.put('/home/sections/:key', putHomeSection);
+adminRouter.get('/:page', getAdminPage);
+adminRouter.put('/:page/sections/:key', putPageSection);
 
 export { adminRouter as adminPageSectionRouter };
 export default router;

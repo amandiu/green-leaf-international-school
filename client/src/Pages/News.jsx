@@ -1,18 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { siteConfig } from '../../../shared/config/siteConfig';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useMarqueeClone } from '../hooks/useMarqueeClone';
+import usePageSeo from '../hooks/usePageSeo';
 import { useNews } from '../hooks/useNews';
-import { SectionWrapper } from '../Components/ui/SectionWrapper';
+import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { Card, CardBadge } from '../Components/ui/Card';
 
 /* ═══════════════════════════════════════════
-   Phase E: the news list comes from the CENTRAL
-   NewsProvider (GET /api/news, fetched once at the
-   app root). No local placeholder arrays — one
-   source of truth shared with the Homepage preview
-   and the Navbar ticker.
+   Phase B item 4: the News page now FILTERS the
+   central NewsProvider list by type (NEWS |
+   NOTICE | EVENT | ANNOUNCEMENT) and renders an
+   Upcoming Events view (EVENT items with a
+   future "Event Date:" line, chronologically).
+   No second data source, no extra fetches —
+   everything derives from the same /api/news
+   payload shared with the Homepage preview and
+   the Navbar ticker.
    ═══════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════
@@ -100,6 +105,88 @@ function NewsCard({ article, className = '' }) {
 }
 
 /* ═══════════════════════════════════════════
+   FILTER CHIPS — same chip pattern as the
+   Gallery page category filter. Values are the
+   ACTUAL backend types; "All" maps to no filter.
+   ═══════════════════════════════════════════ */
+const FILTERS = [
+  { key: 'ALL', label: 'All' },
+  { key: 'NEWS', label: 'News' },
+  { key: 'EVENT', label: 'Events' },
+  { key: 'NOTICE', label: 'Notices' },
+  { key: 'ANNOUNCEMENT', label: 'Announcements' },
+];
+
+function chipClass(active) {
+  return [
+    'rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all duration-200',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-forest-500',
+    active
+      ? 'bg-forest-700 text-white'
+      : 'border border-charcoal-200 text-charcoal-600 hover:bg-charcoal-50',
+  ].join(' ');
+}
+
+function FilterChips({ active, onChange }) {
+  return (
+    <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+      {FILTERS.map((filter) => (
+        <button
+          key={filter.key}
+          type="button"
+          onClick={() => onChange(filter.key)}
+          className={chipClass(active === filter.key)}
+          aria-pressed={active === filter.key}
+        >
+          {filter.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   UPCOMING EVENT CARD — event date is shown
+   when the item carries a derived eventDate
+   (parsed server-side from the item's content
+   "Event Date:" line). Cards link to the same
+   /news/:slug detail pages.
+   ═══════════════════════════════════════════ */
+function UpcomingEventCard({ article }) {
+  return (
+    <article className="group">
+      <Link
+        to={`/news/${article.slug}`}
+        className="flex h-full items-stretch gap-4 rounded-xl border border-charcoal-100/70 bg-white p-4 transition-all duration-300 ease-premium hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-600"
+      >
+        <div className="flex w-16 shrink-0 flex-col items-center justify-center rounded-lg bg-forest-50 py-2">
+          <span className="text-caption font-semibold uppercase tracking-wide text-forest-600">
+            {article.eventDate
+              ? new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'Asia/Dhaka' }).format(new Date(article.eventDate))
+              : 'TBA'}
+          </span>
+          <span className="font-heading text-2xl font-bold text-forest-700">
+            {article.eventDate
+              ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', timeZone: 'Asia/Dhaka' }).format(new Date(article.eventDate))
+              : '—'}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-heading text-[15px] font-semibold text-charcoal-900 leading-snug group-hover:text-forest-700 transition-colors duration-200">
+            {article.title}
+          </h3>
+          {article.excerpt && (
+            <p className="mt-1 text-body-sm text-charcoal-500 leading-relaxed line-clamp-2">
+              {article.excerpt}
+            </p>
+          )}
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+/* ═══════════════════════════════════════════
    NEWS HERO
    ═══════════════════════════════════════════ */
 function NewsHero() {
@@ -133,11 +220,43 @@ function NewsHero() {
    NEWS PAGE — Main Component
    ═══════════════════════════════════════════ */
 function News() {
+  // Phase B.7: per-page metadata. Filtered views (?type=…) share
+  // this canonical — the CONSERVATIVE choice keeps one indexable
+  // News URL instead of hundreds of duplicate filter URLs.
+  usePageSeo({
+    title: 'News & Events',
+    description:
+      'Latest news, notices, events and announcements from Green Leaf International School & College.',
+    path: '/news',
+  });
+
   const articlesRef = useScrollReveal();
   const [showAll, setShowAll] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [filter, setFilter] = useState('ALL');
   const { items: news, status } = useNews();
+
+  /* Client-side projection of the ONE central list — no extra
+     fetch per filter (the provider payload already carries every
+     published item; type filtering here mirrors the validated
+     ?type= capability of the same API). */
+  const filtered = useMemo(
+    () => (filter === 'ALL' ? news : news.filter((item) => item.type === filter)),
+    [news, filter],
+  );
+  const showTicker = filter === 'ALL';
+
+  /* Upcoming events: EVENT items with a future derived eventDate,
+     chronologically. Missing dates are excluded (handled safely). */
+  const upcomingEvents = useMemo(() => {
+    const now = Date.now();
+    return news
+      .filter((item) => item.type === 'EVENT' && item.eventDate)
+      .map((item) => ({ ...item, ts: new Date(item.eventDate).getTime() }))
+      .filter((item) => Number.isFinite(item.ts) && item.ts >= now)
+      .sort((a, b) => a.ts - b.ts);
+  }, [news]);
 
   /* Loop guard: the ticker animation slides the track by -50%, which
      is only seamless when one copy fills the viewport. With few items
@@ -145,7 +264,7 @@ function News() {
      twice. Clone (and animate) ONLY when one copy is narrower than
      the viewport; until then the carousel is a static row. */
   const marquee = useMarqueeClone({
-    enabled: !showAll && !prefersReduced,
+    enabled: showTicker && !showAll && !prefersReduced,
     animation: {
       animation: 'newsTicker 35s linear infinite',
       width: 'max-content',
@@ -164,7 +283,7 @@ function News() {
         width: 'max-content',
         ...(marquee.trackStyle ?? {}),
       };
-  const carouselNews = marquee.clone ? [...news, ...news] : news;
+  const carouselNews = marquee.clone ? [...filtered, ...filtered] : filtered;
 
   useEffect(() => {
     setPrefersReduced(
@@ -180,11 +299,27 @@ function News() {
   const toggleShowAll = useCallback(() => setShowAll((prev) => !prev), []);
 
   const isLoading = status === 'loading';
-  const isEmpty = !isLoading && news.length === 0;
+  const isEmpty = !isLoading && filtered.length === 0;
 
   return (
     <>
       <NewsHero />
+
+      {/* ── Upcoming Events (chronological, future only) ── */}
+      {upcomingEvents.length > 0 && (
+        <SectionWrapper bg="bg-cream-50" padding="py-section">
+          <SectionHeader
+            badge="Save the Date"
+            title="Upcoming Events"
+            description="What's coming up next at our school."
+          />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {upcomingEvents.map((event) => (
+              <UpcomingEventCard key={event.slug} article={event} />
+            ))}
+          </div>
+        </SectionWrapper>
+      )}
 
       <SectionWrapper bg="bg-white" padding="py-section">
         {/* ── Section Header + Show All Button ── */}
@@ -216,10 +351,15 @@ function News() {
           )}
         </div>
 
+        {/* ── Type filter chips (actual backend type values) ── */}
+        {news.length > 0 && <FilterChips active={filter} onChange={setFilter} />}
+
         {/* ── Empty / loading state (intentional, no fake content) ── */}
         {isEmpty && (
           <p className="text-center text-body-lg text-charcoal-400 py-12" role="status">
-            No news or notices published yet. Check back soon.
+            {filter === 'ALL'
+              ? 'No news or notices published yet. Check back soon.'
+              : `No ${FILTERS.find((f) => f.key === filter)?.label.toLowerCase() ?? 'items'} published in this category yet.`}
           </p>
         )}
         {isLoading && (
@@ -228,8 +368,9 @@ function News() {
           </p>
         )}
 
-        {/* ── MODE A: Horizontal Animated Showcase ── */}
-        {!showAll && news.length > 0 && (
+        {/* ── MODE A: Horizontal Animated Showcase (All filter only —
+             the ticker is an "everything happening" showcase) ── */}
+        {showTicker && !showAll && filtered.length > 0 && (
           <div
             ref={marquee.viewportRef}
             className="overflow-hidden relative"
@@ -253,7 +394,7 @@ function News() {
                 <div
                   key={marquee.clone ? `${article.slug}-${index}` : article.slug}
                   className="flex-shrink-0 w-[300px] md:w-[340px]"
-                  aria-hidden={index >= news.length || undefined}
+                  aria-hidden={index >= filtered.length || undefined}
                 >
                   <NewsCard article={article} />
                 </div>
@@ -262,13 +403,13 @@ function News() {
           </div>
         )}
 
-        {/* ── MODE B: Static Responsive Grid ── */}
-        {showAll && news.length > 0 && (
+        {/* ── MODE B: Static Responsive Grid (filtered or Show All) ── */}
+        {(!showTicker || showAll) && filtered.length > 0 && (
           <div
             ref={articlesRef}
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 stagger-children"
           >
-            {news.map((article) => (
+            {filtered.map((article) => (
               <NewsCard key={article.slug} article={article} />
             ))}
           </div>

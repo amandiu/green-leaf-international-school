@@ -156,6 +156,34 @@ import { newsPublicRoutes, newsAdminRoutes } from './routes/newsRoutes.js';
 app.use('/api/news', newsPublicRoutes);
 app.use('/api/admin/news', newsAdminRoutes);
 
+// Contact messages (Phase B.1): ONE public submit endpoint (POST
+// /api/contact) + adminAuth-gated inbox. There is intentionally NO
+// public read endpoint — contact submissions are private data.
+import contactRoutes, { adminContactRouter } from './routes/contactRoutes.js';
+app.use('/api/contact', contactRoutes);
+app.use('/api/admin/contact-messages', adminContactRouter);
+
+// Gallery (Phase B.2): public read-only (PUBLISHED items only) +
+// adminAuth-gated CRUD. Image uploads reuse the EXISTING shared
+// endpoint POST /api/admin/uploads/image (no new upload surface).
+import galleryRoutes, { adminGalleryRouter } from './routes/galleryRoutes.js';
+app.use('/api/gallery', galleryRoutes);
+app.use('/api/admin/gallery', adminGalleryRouter);
+
+// Downloads (Phase B.6): public read-only (PUBLISHED only) + secure
+// DB-mediated file serving (GET /api/downloads/:id/file). Admin
+// CRUD + document uploads through the shared admin upload surface
+// (POST /api/admin/uploads/document — PDF allowlist branch).
+import downloadRoutes, { adminDownloadRouter } from './routes/downloadRoutes.js';
+app.use('/api/downloads', downloadRoutes);
+app.use('/api/admin/downloads', adminDownloadRouter);
+
+// SEO (Phase B.7): robots.txt + sitemap.xml from the shared route
+// inventory (SEO_ROUTES) + PUBLISHED news slugs from the DB. No
+// auth, no user input; mounted BEFORE the API 404 handler.
+import seoRoutes from './routes/seoRoutes.js';
+app.use('/', seoRoutes);
+
 // --------------- 404 Handler ---------------
 
 app.use((req, res) => {

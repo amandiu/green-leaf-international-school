@@ -10,6 +10,7 @@
 // ------------------------------------------------------------
 
 import { saveImage } from '../utils/imageUpload.js';
+import { saveDocument } from '../utils/documentUpload.js';
 import { UPLOAD_ERROR_CODES } from '../utils/imageSanitizer.js';
 
 /** Client-safe messages per validation error code. */
@@ -65,5 +66,47 @@ export async function uploadAdminImage(req, res) {
     // Anything else: log server-side, return a generic safe 500.
     console.error('Admin: image upload failed:', err?.message || err);
     return res.status(500).json({ success: false, message: 'Image upload failed.' });
+  }
+}
+
+/**
+ * POST /api/admin/uploads/document (Phase B.6)
+ * req.uploadedFile is attached by middleware/readImageUpload
+ * (same streaming 10 MB cap + multipart extraction as images).
+ * The DOCUMENT branch (utils/documentUpload.js) enforces the PDF
+ * allowlist + %PDF- magic bytes and stores under a server-
+ * generated name. Response: 201 { data: { file_path, bytes,
+ * original_filename, file_ext } }.
+ */
+export async function uploadAdminDocument(req, res) {
+  try {
+    const file = req.uploadedFile;
+    if (!file || !file.data) {
+      return res.status(400).json({
+        success: false,
+        message: 'No document file was received.',
+      });
+    }
+
+    const stored = await saveDocument(file);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        file_path: stored.publicUrl,
+        bytes: stored.bytes,
+        original_filename: stored.original_filename,
+        file_ext: stored.file_ext,
+      },
+    });
+  } catch (err) {
+    const msg = typeof err?.message === 'string' ? err.message : '';
+    // Known validation failures (extension allowlist, magic bytes,
+    // size cap, empty body) → safe 400 with the safe message.
+    if (msg) {
+      return res.status(400).json({ success: false, message: msg });
+    }
+    console.error('Admin: document upload failed:', err?.message || err);
+    return res.status(500).json({ success: false, message: 'Document upload failed.' });
   }
 }

@@ -46,18 +46,47 @@ const EMPTY_FORM = {
   content: '',
   image: '',
   slug: '',
+  eventDate: '',
 };
+
+/**
+ * Phase B item 4: the event date lives INSIDE the item content as
+ * its first line — `Event Date: YYYY-MM-DD` — the same line the
+ * public API parses into the derived `eventDate` field. ONE date
+ * source: no new column, no duplicate date stored elsewhere.
+ * These helpers split/restore that line so the form can offer a
+ * plain date picker without changing the stored convention.
+ */
+const EVENT_DATE_LINE_RE = /^Event Date[ \t]*:[ \t]*([^\n]+)\n?/i;
+
+function splitEventDate(content, type) {
+  const text = content ?? '';
+  if (type !== 'EVENT') return { eventDate: '', body: text };
+  const match = text.match(EVENT_DATE_LINE_RE);
+  if (!match) return { eventDate: '', body: text };
+  const iso = match[1].trim().match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? '';
+  return { eventDate: iso, body: text.slice(match[0].length).replace(/^\n+/, '') };
+}
+
+function joinEventDate(eventDate, body) {
+  const trimmedBody = (body ?? '').replace(/^\n+/, '');
+  return eventDate
+    ? `Event Date: ${eventDate}${trimmedBody ? `\n${trimmedBody}` : ''}`
+    : trimmedBody;
+}
 
 /** Turn a list row into form values (dates stay server-formatted). */
 function toForm(item) {
+  const { eventDate, body } = splitEventDate(item.content, item.type);
   return {
     title: item.title ?? '',
     type: item.type ?? 'NEWS',
     status: item.status ?? 'DRAFT',
     excerpt: item.excerpt ?? '',
-    content: item.content ?? '',
+    content: body,
     image: item.image ?? '',
     slug: item.slug ?? '',
+    eventDate,
   };
 }
 
@@ -80,7 +109,9 @@ function NewsForm({ initial, onSaved, onCancel, onUnauthorized }) {
         type: values.type,
         status: values.status,
         excerpt: values.excerpt.trim(),
-        content: values.content,
+        content: values.type === 'EVENT'
+          ? joinEventDate(values.eventDate, values.content)
+          : values.content,
         image: values.image.trim(),
       };
       if (isEdit) {
@@ -174,6 +205,25 @@ function NewsForm({ initial, onSaved, onCancel, onUnauthorized }) {
             <option value="ARCHIVED">Archived (hidden, kept)</option>
           </select>
         </div>
+
+        {values.type === 'EVENT' && (
+          <div>
+            <label className={labelClass} htmlFor="news-event-date">
+              Event Date
+            </label>
+            <input
+              id="news-event-date"
+              type="date"
+              className={inputClass}
+              value={values.eventDate}
+              onChange={(e) => setField('eventDate', e.target.value)}
+            />
+            <p className="mt-1 text-xs text-charcoal-400">
+              Upcoming Events lists this item while the date is today or
+              later (chronologically). Leave empty for “TBA”.
+            </p>
+          </div>
+        )}
 
         <div className="sm:col-span-2">
           <label className={labelClass} htmlFor="news-excerpt">

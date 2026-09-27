@@ -20,7 +20,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import adminAuth from '../middleware/sessionAuth.js';
 import { readImageUpload } from '../middleware/upload.js';
-import { uploadAdminImage } from '../controllers/uploadsController.js';
+import { uploadAdminImage, uploadAdminDocument } from '../controllers/uploadsController.js';
 
 const router = Router();
 
@@ -40,5 +40,12 @@ const uploadRateLimit = rateLimit({
 
 router.use(adminAuth);
 router.post('/image', uploadRateLimit, readImageUpload, uploadAdminImage);
+
+// Phase B.6: DOCUMENT uploads share the SAME auth gate, raw-body
+// middleware and limiter budget principles as images, but run the
+// DOCUMENT branch of the pipeline (PDF allowlist + magic-byte
+// check — no image processing, no WebP re-encoding). The image
+// endpoint and its security are untouched.
+router.post('/document', uploadRateLimit, readImageUpload, uploadAdminDocument);
 
 export default router;

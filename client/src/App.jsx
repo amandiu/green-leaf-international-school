@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './Components/layout';
 import ErrorBoundary from './Components/ui/ErrorBoundary';
-import { Home, About, Academics, Admissions, Campus, News, Contact, NewsDetail } from './Pages';
+import { Home, About, Academics, Admissions, Campus, News, Contact, NewsDetail, Gallery, TeachersStaff, Downloads } from './Pages';
 import { HomeContentProvider } from './hooks/useHomeContent';
 import { ReusableContentProvider } from './hooks/useReusableContent';
 import { NewsProvider } from './hooks/useNews';
@@ -33,6 +33,11 @@ function App() {
             <Route path="/academics" element={<Academics />} />
             <Route path="/admissions" element={<Admissions />} />
             <Route path="/campus" element={<Campus />} />
+            {/* Phase B.5: public Teachers & Staff directory (static-first). */}
+            <Route path="/teachers" element={<TeachersStaff />} />
+            {/* Phase B.6: public Downloads Center (DB-backed, secure serving). */}
+            <Route path="/downloads" element={<Downloads />} />
+            <Route path="/gallery" element={<Gallery />} />
             <Route path="/news" element={<News />} />
             <Route path="/news/:slug" element={<NewsDetail />} />
             <Route path="/contact" element={<Contact />} />

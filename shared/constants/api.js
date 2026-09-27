@@ -15,6 +15,14 @@ export const API_ROUTES = {
   LEADERSHIP_MESSAGES: '/api/leadership-messages',
   SETTINGS: '/api/settings',
   PAGES_HOME: '/api/pages/home',
+  // Phase B.3: DB-backed page content (page_sections) for the
+  // About / Academics / Campus informational pages.
+  PAGES_ABOUT: '/api/pages/about',
+  PAGES_ACADEMICS: '/api/pages/academics',
+  PAGES_CAMPUS: '/api/pages/campus',
+  // Phase B.6: Downloads Center (downloads entity + secure
+  // DB-mediated file serving).
+  DOWNLOADS: '/api/downloads',
   CONTENT_BLOCKS: '/api/content/blocks',
   UPLOADS: '/api/uploads',
 };

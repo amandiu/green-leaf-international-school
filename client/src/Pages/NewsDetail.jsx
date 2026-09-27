@@ -4,6 +4,7 @@ import { siteConfig } from '../../../shared/config/siteConfig';
 import { SectionWrapper } from '../Components/ui/SectionWrapper';
 import { CardBadge } from '../Components/ui/Card';
 import { getPublishedNewsBySlug } from '../services/newsService';
+import usePageSeo from '../hooks/usePageSeo';
 
 /* ═══════════════════════════════════════════
    NEWS DETAIL (Phase E) — /news/:slug
@@ -76,9 +77,21 @@ function NewsDetail() {
     };
   }, [slug]);
 
-  useEffect(() => {
-    if (item?.title) document.title = `${item.title} — ${siteConfig.identity.name}`;
-  }, [item?.title]);
+  // Phase B.7 — dynamic per-item SEO. The detail endpoint serves
+  // PUBLISHED rows only, so draft/archived/unknown slugs arrive
+  // here as `null` and render the not-found state with NEUTRAL
+  // metadata (no article title/description/schema ever leaks
+  // unpublished content). While loading, neutral metadata too.
+  const seoItem = item && item.title ? item : undefined;
+  usePageSeo({
+    title: seoItem ? seoItem.title : 'News',
+    description:
+      seoItem?.excerpt ||
+      'News, notices, events and announcements from Green Leaf International School & College.',
+    path: seoItem ? `/news/${seoItem.slug}` : '/news',
+    item: seoItem,
+    ogType: seoItem ? 'article' : 'website',
+  });
 
   if (item === undefined && !failed) return <DetailSkeleton />;
   if (failed) {

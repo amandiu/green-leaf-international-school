@@ -97,13 +97,51 @@ function withDateLabel(item) {
 }
 
 /**
+ * Phase B item 4: the optional "Event Date:" line (first-line
+ * convention documented in the admin form) is the ONE event-date
+ * source — it lives inside the item's existing content (no new
+ * DB column, no duplicate date source). Parsed to ISO here so
+ * list consumers (public) get a machine-readable date WITHOUT
+ * exposing the full content body. Unparseable/missing → null.
+ */
+const EVENT_DATE_RE = /^[ \t]*Event Date[ \t]*:[ \t]*(.+)$/im;
+
+export function extractEventDate(content) {
+  if (typeof content !== 'string') return null;
+  const match = content.match(EVENT_DATE_RE);
+  if (!match) return null;
+  const parsed = new Date(match[1].trim());
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+/**
  * Public list of PUBLISHED items (newest first). `content` is
  * omitted from lists (detail endpoint only). No item rows from
  * any other source are merged — this is the only item source.
+ * Event-type items carry a derived `eventDate` (ISO, from the
+ * content's "Event Date:" line) when one is set.
  */
-export async function getPublicNews({ limit, offset, type } = {}) {
-  const items = await findPublished({ limit, offset, type });
-  return items.map(({ content, ...item }) => withDateLabel(item));
+export async function getPublicNews({ limit, offset, type, upcoming = false } = {}) {
+  // Phase B item 4: the upcoming-events view is a projection of the
+  // SAME published rows — no parallel source, no second query path.
+  // Requires the validated event type + a derived event date;
+  // missing/unparseable dates are excluded (handled safely).
+  const effectiveType = upcoming ? 'EVENT' : type;
+  const items = await findPublished({
+    limit: upcoming ? undefined : limit,
+    offset: upcoming ? undefined : offset,
+    type: effectiveType,
+  });
+  const shaped = items.map(({ content, ...item }) => {
+    const base = withDateLabel(item);
+    const eventDate = extractEventDate(content);
+    return eventDate ? { ...base, eventDate } : base;
+  });
+  if (!upcoming) return shaped;
+  const now = Date.now();
+  return shaped
+    .filter((item) => item.eventDate && new Date(item.eventDate).getTime() >= now)
+    .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
 }
 
 /** Public detail by slug (PUBLISHED only). */

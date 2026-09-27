@@ -17,6 +17,17 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
+      // Phase B.7: SEO files are served by the API (DB-driven
+      // sitemap) — proxy them in dev so /robots.txt and
+      // /sitemap.xml resolve on the public dev origin too.
+      '/robots.txt': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+      '/sitemap.xml': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
     },
   },
   build: {

@@ -11,6 +11,7 @@ import { useHomeContent } from "../hooks/useHomeContent";
 import { useNews } from "../hooks/useNews";
 import { useReusableContent } from "../hooks/useReusableContent";
 import CtaBand from "../Components/content/CtaBand";
+import usePageSeo from "../hooks/usePageSeo";
 import { buildMapsUrls } from "../../../shared/utils/mapsUrls";
 
 /* Maps URLs are built by the ONE shared builder (Phase C) from
@@ -1104,6 +1105,14 @@ function MapSection() {
    HOME PAGE
    ═══════════════════════════════════════════ */
 function Home() {
+  // Phase B.7: per-page metadata (title/description/canonical/OG).
+  usePageSeo({
+    title: 'Home',
+    description:
+      'Green Leaf International School & College — quality education, academic excellence, moral values and character development. Nurturing Minds, Growing Futures.',
+    path: '/',
+  });
+
   return (
     <>
       <Hero />

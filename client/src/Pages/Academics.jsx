@@ -1,16 +1,20 @@
 import { Link } from 'react-router-dom';
 import { siteConfig } from '../../../shared/config/siteConfig';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { usePageContent } from '../hooks/usePageContent';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { Card } from '../Components/ui/Card';
 import Button from '../Components/ui/Button';
+import { defaultAcademicsContent } from '../../../shared/content/academicsContent';
+import usePageSeo from '../hooks/usePageSeo';
 
-const programs = [
-  { level: 'Primary', grades: 'Class I — Class V', description: 'Building strong foundations in literacy, numeracy, and creative thinking.', icon: '📚' },
-  { level: 'Middle School', grades: 'Class VI — Class VIII', description: 'Deepening knowledge, developing critical thinking and independence.', icon: '🔬' },
-  { level: 'Secondary', grades: 'Class IX — Class X', description: 'Preparing for board examinations with focused academic rigor.', icon: '🎓' },
-  { level: 'Higher Secondary', grades: 'Class XI — Class XII', description: 'Specialized streams preparing students for university and careers.', icon: '🏛️' },
-];
+// Phase B.3: the Academics page's editable sections are DB-backed
+// (page_sections, page='academics'). These verified fallback
+// constants render immediately and stay as the safe baseline when
+// the API is unavailable or a section is empty. This page is the
+// public INFORMATIONAL page only — attendance/results/classes/
+// exam management remain future phases.
+const FALLBACK_CONTENT = defaultAcademicsContent();
 
 function AcademicsHero() {
   return (
@@ -38,37 +42,47 @@ function AcademicsHero() {
 }
 
 function Academics() {
+  // Phase B.7: per-page metadata.
+  usePageSeo({
+    title: 'Academics',
+    description:
+      'Academic programs, curriculum overview and learning environment at Green Leaf International School & College.',
+    path: '/academics',
+  });
+
+  const { content } = usePageContent('academics', FALLBACK_CONTENT);
   const overviewRef = useScrollReveal();
   const programsRef = useScrollReveal();
   const envRef = useScrollReveal();
+
+  const { overview, programs, environment, academicsCta } = content;
 
   return (
     <>
       <AcademicsHero />
 
       {/* Curriculum Overview */}
+      {overview?.isActive !== false && (
       <SectionWrapper bg="bg-white" padding="py-section">
         <div ref={overviewRef} className="reveal">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="order-2 md:order-1">
-              <span className="eyebrow mb-4">Curriculum</span>
+              <span className="eyebrow mb-4">{overview.eyebrow}</span>
               <h2 className="font-heading text-h2 text-charcoal-900 mb-5 mt-3">
-                Our Academic Approach
+                {overview.title}
               </h2>
               <p className="text-charcoal-500 leading-relaxed mb-4">
-                [Curriculum details placeholder — Replace with verified information about the
-                curriculum framework, examination boards, and academic standards.]
+                {overview.paragraph1}
               </p>
               <p className="text-charcoal-500 leading-relaxed">
-                We believe that education should develop the whole person — intellectually,
-                socially, emotionally, and physically.
+                {overview.paragraph2}
               </p>
             </div>
             <div className="order-1 md:order-2 relative">
               <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                 <img
-                  src="/Activity/732747749_1461551622654015_1537158411137272684_n.jpg"
-                  alt={`Students learning at ${siteConfig.identity.name}`}
+                  src={overview.image}
+                  alt={overview.imageAlt || `Students learning at ${siteConfig.identity.name}`}
                   className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                   loading="lazy"
                 />
@@ -78,39 +92,39 @@ function Academics() {
           </div>
         </div>
       </SectionWrapper>
+      )}
 
       {/* Programs */}
+      {programs?.isActive !== false && (
       <SectionWrapper bg="bg-cream-50" padding="py-section">
         <SectionHeader
-          badge="Programs"
-          title="Academic Programs"
-          description="Structured pathways for every stage of your child's educational journey."
+          badge={programs.eyebrow}
+          title={programs.title}
+          description={programs.description}
         />
         <div ref={programsRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
-          {programs.map((program) => (
-            <Card key={program.level} className="group">
+          {(programs.programs ?? []).map((program) => (
+            <Card key={program.title} className="group">
               <span className="text-4xl mb-4 block">{program.icon}</span>
-              <h3 className="font-heading text-h3 text-charcoal-900 mb-1">{program.level}</h3>
-              <p className="text-body-sm font-medium text-forest-600 mb-3">{program.grades}</p>
+              <h3 className="font-heading text-h3 text-charcoal-900 mb-1">{program.title}</h3>
+              <p className="text-body-sm font-medium text-forest-600 mb-3">{program.subtitle}</p>
               <p className="text-body-sm text-charcoal-500 leading-relaxed">{program.description}</p>
             </Card>
           ))}
         </div>
-      </SectionWrapper>
+        </SectionWrapper>
+      )}
 
       {/* Learning Environment */}
+      {environment?.isActive !== false && (
       <SectionWrapper bg="bg-white" padding="py-section">
         <SectionHeader
-          badge="Environment"
-          title="Learning Environment"
-          description="Creating spaces and experiences that inspire curiosity and growth."
+          badge={environment.eyebrow}
+          title={environment.title}
+          description={environment.description}
         />
         <div ref={envRef} className="grid md:grid-cols-3 gap-6 stagger-children">
-          {[
-            { title: 'Smart Classrooms', description: 'Technology-enhanced learning spaces with interactive displays.', icon: '💻' },
-            { title: 'Science Laboratories', description: 'Fully equipped labs for hands-on scientific exploration.', icon: '🧪' },
-            { title: 'Library & Resource Center', description: 'A vast collection of books, digital resources, and study spaces.', icon: '📚' },
-          ].map((item) => (
+          {(environment.items ?? []).map((item) => (
             <Card key={item.title} className="group text-center">
               <span className="text-4xl mb-4 block">{item.icon}</span>
               <h4 className="font-heading text-h3 text-charcoal-900 mb-2">{item.title}</h4>
@@ -119,19 +133,22 @@ function Academics() {
           ))}
         </div>
       </SectionWrapper>
+      )}
 
       {/* CTA */}
+      {academicsCta?.isActive !== false && (
       <section className="bg-forest-800 py-16">
         <div className="container-custom text-center">
           <h2 className="font-heading text-h2 text-white mb-3">
-            Interested in Our Academic Programs?
+            {academicsCta.title}
           </h2>
-          <p className="text-body-lg text-forest-200 mb-8">Contact us to learn more about admissions.</p>
-          <Link to="/contact" className="group">
-            <Button variant="gold" size="lg">Get in Touch</Button>
+          <p className="text-body-lg text-forest-200 mb-8">{academicsCta.description}</p>
+          <Link to={academicsCta.buttonLink || '/contact'} className="group">
+            <Button variant="gold" size="lg">{academicsCta.buttonText}</Button>
           </Link>
         </div>
       </section>
+      )}
     </>
   );
 }

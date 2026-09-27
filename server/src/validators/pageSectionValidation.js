@@ -1,25 +1,28 @@
 // ------------------------------------------------------------
-// Home page section content validation (Phase B)
+// Page section content validation (Phase B + B.3)
 //
 // Pure format/shape validation — no database access. Defines the
 // ALLOWED pages/section keys and each section's exact content
 // schema. Unknown pages, sections and fields are REJECTED (never
 // silently accepted), matching the Phase A validation style.
 //
-//   PUT /api/admin/pages/home/sections/:key
+//   PUT /api/admin/pages/:page/sections/:key
 //
 // Image fields accept site-relative paths or http(s) URLs only
-// (same asset rule as Phase A branding). Social/news strings are
-// bounded; template tokens ({{identity.*}}, {{social.*}}) are the
-// sanctioned way to keep following Site Settings. Database
-// writes are parameterized in the model — client input never
-// reaches SQL text.
+// (same asset rule as Phase A branding). Template tokens
+// ({{identity.*}}, {{social.*}}) are the sanctioned way to keep
+// following Site Settings. Database writes are parameterized in
+// the model — client input never reaches SQL text.
+//
+// Phase B.3: the same per-section schema registry now covers the
+// 'about' | 'academics' | 'campus' page identifiers alongside
+// 'home'. Home schemas are UNCHANGED (byte-for-byte behaviour).
 // ------------------------------------------------------------
 
 import { badRequest } from '../utils/errors.js';
 
-/** Pages with a validated section schema (Phase B: home only). */
-export const SECTION_PAGES = Object.freeze(['home']);
+/** Pages with a validated section schema (home + Phase B.3 pages). */
+export const SECTION_PAGES = Object.freeze(['home', 'about', 'academics', 'campus']);
 
 /** Allowed home section keys. */
 export const HOME_SECTIONS = Object.freeze([
@@ -30,6 +33,28 @@ export const HOME_SECTIONS = Object.freeze([
   'admissionsCta',
 ]);
 
+/** Allowed about page section keys (Phase B.3). */
+export const ABOUT_SECTIONS = Object.freeze([
+  'intro',
+  'coreValues',
+  'visionMission',
+]);
+
+/** Allowed academics page section keys (Phase B.3). */
+export const ACADEMICS_SECTIONS = Object.freeze([
+  'overview',
+  'programs',
+  'environment',
+  'academicsCta',
+]);
+
+/** Allowed campus page section keys (Phase B.3). */
+export const CAMPUS_SECTIONS = Object.freeze([
+  'overview',
+  'facilities',
+  'galleryHighlight',
+]);
+
 /** Sensible array limits. */
 const LIMITS = Object.freeze({
   heroSlides: 10,
@@ -37,6 +62,12 @@ const LIMITS = Object.freeze({
   videoSlides: 12,
   newsItems: 12,
   metadata: 6,
+  // Phase B.3: informational card lists + rich text blocks.
+  values: 8,
+  programs: 8,
+  environmentItems: 8,
+  facilities: 12,
+  paragraphs: 2,
 });
 
 const STRING_MAX = 500;
@@ -48,7 +79,7 @@ const HTTP_URL_RE = /^https?:\/\/[^\s]+$/i;
 const ASSET_RE = /^(\/[A-Za-z0-9\-._~!$&'()*+,;=:@%\/ ]+|https?:\/\/[^\s]+)$/i;
 /** Sanctioned template tokens resolved from Site Settings at render time. */
 const TOKEN_RE = /^\{\{(identity\.(name|shortName)|social\.youtube)\}\}$/;
-const INTERNAL_LINK_RE = /^\/[A-Za-z0-9\-._~/]*$/;
+const INTERNAL_LINK_RE = /^\/[A-Za-z0-9\-._~\/]*$/;
 
 function requireString(value, label, max = STRING_MAX) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -218,10 +249,204 @@ function validateNewsPreview(value) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Phase B.3 — about / academics / campus section schemas
+// (reusable card validators shared by the informational pages)
+// ═══════════════════════════════════════════════════════════════
+
+/** About intro / Academics overview / Campus overview band. */
+function validateOverviewBand(value, page) {
+  const clean = {
+    eyebrow: optionalString(value.eyebrow ?? '', `${page}.eyebrow`, 100),
+    title: requireString(value.title ?? '', `${page}.title`, HEADLINE_MAX),
+    paragraph1: requireString(value.paragraph1 ?? '', `${page}.paragraph1`, DESCRIPTION_MAX),
+    paragraph2: optionalString(value.paragraph2 ?? '', `${page}.paragraph2`, DESCRIPTION_MAX),
+    image: optionalAsset(value.image ?? '', `${page}.image`),
+    imageAlt: optionalString(value.imageAlt ?? '', `${page}.imageAlt`, STRING_MAX),
+  };
+  clean.isActive = requireBoolean(value.isActive ?? true, `${page}.isActive`);
+  return clean;
+}
+
+/** Icon-card arrays: [{ title, description, icon }] — values,
+ *  environment items and facilities share it. `extraFields`
+ *  adds optional per-page fields (e.g. 'subtitle' for academics
+ *  program cards' grades line). */
+function validateIconCards(value, label, maxItems, extraFields = []) {
+  if (!Array.isArray(value)) throw badRequest(`${label} must be an array`);
+  if (value.length === 0) throw badRequest(`${label} must contain at least 1 item`);
+  if (value.length > maxItems) {
+    throw badRequest(`${label} must contain at most ${maxItems} items`);
+  }
+  const FIELDS = ['title', 'description', 'icon', ...extraFields];
+  return value.map((item, i) => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      throw badRequest(`${label}[${i}] must be an object`);
+    }
+    const unknown = Object.keys(item).filter((k) => !FIELDS.includes(k));
+    if (unknown.length > 0) {
+      throw badRequest(`Unknown field "${label}[${i}].${unknown[0]}"`);
+    }
+    const clean = {
+      title: requireString(item.title ?? '', `${label}[${i}].title`, HEADLINE_MAX),
+      description: optionalString(item.description ?? '', `${label}[${i}].description`, DESCRIPTION_MAX),
+      icon: optionalString(item.icon ?? '', `${label}[${i}].icon`, 8),
+    };
+    if (extraFields.includes('subtitle')) {
+      clean.subtitle = optionalString(item.subtitle ?? '', `${label}[${i}].subtitle`, STRING_MAX);
+    }
+    return clean;
+  });
+}
+
 /**
- * Validate + normalize one home section payload.
- * sectionKey must already be a known key; the payload must be the
- * section's content object. Unknown fields are rejected.
+ * Validate + normalize one page section payload.
+ * sectionKey must already be a known key for the given page; the
+ * payload must be the section's content object. Unknown fields
+ * are rejected.
+ */
+export function validatePageSection(page, sectionKey, input) {
+  if (!SECTION_PAGES.includes(page)) {
+    throw badRequest(`Unknown page "${page}"`);
+  }
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    throw badRequest('Section content must be a JSON object');
+  }
+
+  // Home keeps its exact Phase B schema.
+  if (page === 'home') return validateHomeSection(sectionKey, input);
+
+  // Per-section top-level fields — unknown fields are rejected
+  // outright (never silently ignored).
+  const SECTION_FIELDS = {
+    about: {
+      intro: ['eyebrow', 'title', 'paragraph1', 'paragraph2', 'image', 'imageAlt', 'isActive'],
+      coreValues: ['eyebrow', 'title', 'description', 'values', 'isActive'],
+      visionMission: ['vision', 'mission', 'isActive'],
+    },
+    academics: {
+      overview: ['eyebrow', 'title', 'paragraph1', 'paragraph2', 'image', 'imageAlt', 'isActive'],
+      programs: ['eyebrow', 'title', 'description', 'programs', 'isActive'],
+      environment: ['eyebrow', 'title', 'description', 'items', 'isActive'],
+      academicsCta: ['title', 'description', 'buttonText', 'buttonLink', 'isActive'],
+    },
+    campus: {
+      overview: ['eyebrow', 'title', 'paragraph1', 'paragraph2', 'image', 'imageAlt', 'isActive'],
+      facilities: ['eyebrow', 'title', 'description', 'facilities', 'isActive'],
+      galleryHighlight: ['eyebrow', 'title', 'description', 'isActive'],
+    },
+  };
+  const allowed = SECTION_FIELDS[page][sectionKey];
+  if (!allowed) {
+    throw badRequest(`Unknown section "${sectionKey}"`);
+  }
+  const unknown = Object.keys(input).filter((k) => !allowed.includes(k));
+  if (unknown.length > 0) {
+    throw badRequest(`Unknown field "${unknown[0]}"`);
+  }
+
+  switch (page) {
+    case 'about':
+      switch (sectionKey) {
+        case 'intro':
+          return validateOverviewBand(input, 'intro');
+        case 'coreValues': {
+          const clean = {
+            eyebrow: optionalString(input.eyebrow ?? '', 'coreValues.eyebrow', 100),
+            title: requireString(input.title ?? '', 'coreValues.title', HEADLINE_MAX),
+            description: optionalString(input.description ?? '', 'coreValues.description', DESCRIPTION_MAX),
+            values: validateIconCards(input.values ?? [], 'coreValues.values', LIMITS.values),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'coreValues.isActive');
+          return clean;
+        }
+        case 'visionMission': {
+          const clean = {
+            vision: requireString(input.vision ?? '', 'visionMission.vision', DESCRIPTION_MAX),
+            mission: requireString(input.mission ?? '', 'visionMission.mission', DESCRIPTION_MAX),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'visionMission.isActive');
+          return clean;
+        }
+        default:
+          throw badRequest(`Unknown section "${sectionKey}"`);
+      }
+
+    case 'academics':
+      switch (sectionKey) {
+        case 'overview':
+          return validateOverviewBand(input, 'overview');
+        case 'programs': {
+          const clean = {
+            eyebrow: optionalString(input.eyebrow ?? '', 'programs.eyebrow', 100),
+            title: requireString(input.title ?? '', 'programs.title', HEADLINE_MAX),
+            description: optionalString(input.description ?? '', 'programs.description', DESCRIPTION_MAX),
+            programs: validateIconCards(input.programs ?? [], 'programs.programs', LIMITS.programs, ['subtitle']),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'programs.isActive');
+          return clean;
+        }
+        case 'environment': {
+          const clean = {
+            eyebrow: optionalString(input.eyebrow ?? '', 'environment.eyebrow', 100),
+            title: requireString(input.title ?? '', 'environment.title', HEADLINE_MAX),
+            description: optionalString(input.description ?? '', 'environment.description', DESCRIPTION_MAX),
+            items: validateIconCards(input.items ?? [], 'environment.items', LIMITS.environmentItems),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'environment.isActive');
+          return clean;
+        }
+        case 'academicsCta': {
+          const clean = {
+            title: requireString(input.title ?? '', 'academicsCta.title', HEADLINE_MAX),
+            description: optionalString(input.description ?? '', 'academicsCta.description', DESCRIPTION_MAX),
+            buttonText: requireString(input.buttonText ?? '', 'academicsCta.buttonText', 100),
+            buttonLink: optionalLink(input.buttonLink ?? '', 'academicsCta.buttonLink'),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'academicsCta.isActive');
+          return clean;
+        }
+        default:
+          throw badRequest(`Unknown section "${sectionKey}"`);
+      }
+
+    case 'campus':
+      switch (sectionKey) {
+        case 'overview':
+          return validateOverviewBand(input, 'overview');
+        case 'facilities': {
+          const clean = {
+            eyebrow: optionalString(input.eyebrow ?? '', 'facilities.eyebrow', 100),
+            title: requireString(input.title ?? '', 'facilities.title', HEADLINE_MAX),
+            description: optionalString(input.description ?? '', 'facilities.description', DESCRIPTION_MAX),
+            facilities: validateIconCards(input.facilities ?? [], 'facilities.facilities', LIMITS.facilities),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'facilities.isActive');
+          return clean;
+        }
+        case 'galleryHighlight': {
+          const clean = {
+            eyebrow: optionalString(input.eyebrow ?? '', 'galleryHighlight.eyebrow', 100),
+            title: requireString(input.title ?? '', 'galleryHighlight.title', HEADLINE_MAX),
+            description: optionalString(input.description ?? '', 'galleryHighlight.description', DESCRIPTION_MAX),
+          };
+          clean.isActive = requireBoolean(input.isActive ?? true, 'galleryHighlight.isActive');
+          return clean;
+        }
+        default:
+          throw badRequest(`Unknown section "${sectionKey}"`);
+      }
+
+    default:
+      // Unknown pages never reach here (SECTION_PAGES guard above
+      // + route allow-list checks first) — defensive guard only.
+      throw badRequest(`Unknown page "${page}"`);
+  }
+}
+
+/**
+ * Back-compat export: the original Phase B home-only validator
+ * signature. All existing callers (service, tests) keep working.
  */
 export function validateHomeSection(sectionKey, input) {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {

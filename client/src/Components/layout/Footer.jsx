@@ -7,6 +7,8 @@ const quickLinks = [
   { path: "/academics", label: "Academics" },
   { path: "/admissions", label: "Admissions" },
   { path: "/campus", label: "Campus" },
+  { path: "/teachers", label: "Teachers & Staff" },
+  { path: "/downloads", label: "Downloads" },
   { path: "/news", label: "News & Events" },
   { path: "/contact", label: "Contact Us" },
 ];

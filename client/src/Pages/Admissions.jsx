@@ -3,6 +3,7 @@ import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { useSettings } from '../context/SettingsContext';
 import { useReusableContent } from '../hooks/useReusableContent';
 import CtaBand from '../Components/content/CtaBand';
+import usePageSeo from '../hooks/usePageSeo';
 
 const steps = [
   { number: '01', title: 'Inquiry', description: 'Reach out to us for information about admissions and available programs.' },
@@ -69,6 +70,14 @@ function AdmissionsCtaBandContent() {
 }
 
 function Admissions() {
+  // Phase B.7: per-page metadata.
+  usePageSeo({
+    title: 'Admissions',
+    description:
+      'Admission information, process steps and requirements for Green Leaf International School & College — enroll for a stronger start.',
+    path: '/admissions',
+  });
+
   const { settings } = useSettings();
   const introRef = useScrollReveal();
   const processRef = useScrollReveal();

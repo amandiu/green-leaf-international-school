@@ -13,6 +13,7 @@ import {
   getAdminNews, getAdminNewsById,
   createNewsItem, updateNewsItem, setNewsStatus, deleteNewsItem,
 } from '../services/newsService.js';
+import { validateType } from '../validators/newsValidation.js';
 import { HttpError } from '../utils/errors.js';
 
 const clampLimit = (v, max = 50) => {
@@ -29,14 +30,24 @@ const clampOffset = (v) => {
 /** GET /api/news — published items, newest first. */
 export async function listPublicNews(req, res) {
   try {
+    // Phase B item 4: the public `?type=` filter is now VALIDATED
+    // (same rules as the admin filter) — unknown types → 400,
+    // never silently ignored. `?upcoming=true` additionally
+    // filters/sorts event-type items by their derived event date.
+    const type = req.query.type ? validateType(req.query.type) : undefined;
+    const upcoming = req.query.upcoming === 'true';
     const items = await getPublicNews({
       limit: clampLimit(req.query.limit),
       offset: clampOffset(req.query.offset),
-      type: req.query.type,
+      type,
+      upcoming,
     });
     res.set('Cache-Control', 'no-store');
     res.status(200).json({ items });
   } catch (err) {
+    if (err instanceof HttpError) {
+      return res.status(err.status).json({ error: err.message });
+    }
     console.error('Failed to load public news:', err.message);
     res.status(500).json({ error: 'Failed to load news' });
   }

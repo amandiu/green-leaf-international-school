@@ -1,14 +1,16 @@
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { usePageContent } from '../hooks/usePageContent';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { Card } from '../Components/ui/Card';
 import { useSettings } from '../context/SettingsContext';
+import { defaultAboutContent } from '../../../shared/content/aboutContent';
+import usePageSeo from '../hooks/usePageSeo';
 
-const values = [
-  { title: 'Excellence', description: 'We strive for the highest standards in everything we do.', icon: '⭐' },
-  { title: 'Integrity', description: 'Honesty, transparency, and ethical conduct guide our actions.', icon: '🛡️' },
-  { title: 'Innovation', description: 'Embracing new ideas and creative approaches to education.', icon: '💡' },
-  { title: 'Respect', description: 'Fostering a culture of mutual respect and understanding.', icon: '🤝' },
-];
+// Phase B.3: the About page's editable sections are DB-backed
+// (page_sections, page='about'). These verified fallback constants
+// render immediately and stay as the safe baseline when the API is
+// unavailable or a section is empty — the page never blanks.
+const FALLBACK_CONTENT = defaultAboutContent();
 
 function AboutHero() {
   const { settings } = useSettings();
@@ -38,39 +40,49 @@ function AboutHero() {
 }
 
 function About() {
+  // Phase B.7: per-page metadata.
+  usePageSeo({
+    title: 'About Us',
+    description:
+      'The story, core values, vision and mission of Green Leaf International School & College — nurturing minds and growing futures in Adabor, Dhaka.',
+    path: '/about',
+  });
+
   const { settings } = useSettings();
   const { identity } = settings;
+  const { content } = usePageContent('about', FALLBACK_CONTENT);
   const introRef = useScrollReveal();
   const vmRef = useScrollReveal();
   const valuesRef = useScrollReveal();
-  const principalRef = useScrollReveal();
+
+  const { intro, coreValues, visionMission } = content;
 
   return (
     <>
       <AboutHero />
 
       {/* Introduction */}
+      {intro?.isActive !== false && (
       <SectionWrapper bg="bg-white" padding="py-section">
         <div ref={introRef} className="reveal">
           <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div>
-              <span className="eyebrow mb-4">Our Story</span>
+              <span className="eyebrow mb-4">{intro.eyebrow}</span>
               <h2 className="font-heading text-h2 text-charcoal-900 mb-5 mt-3">
-                A Tradition of Excellence
+                {intro.title}
               </h2>
               <p className="text-charcoal-500 leading-relaxed mb-4">
-                [School introduction placeholder — Replace with verified school history and background information.]
+                {intro.paragraph1}
               </p>
               <p className="text-charcoal-500 leading-relaxed">
-                {identity.name} is dedicated to providing a nurturing
-                environment where students can thrive academically, socially, and personally.
+                {intro.paragraph2}
               </p>
             </div>
             <div className="relative">
               <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                 <img
-                  src="/Activity/799142983_1523030073172836_1172060919875647706_n.jpg"
-                  alt={`${identity.name} students and campus`}
+                  src={intro.image}
+                  alt={intro.imageAlt || `${identity.name} students and campus`}
                   className="w-full h-full object-cover transition-transform duration-700 ease-premium hover:scale-[1.03]"
                   loading="lazy"
                 />
@@ -81,15 +93,18 @@ function About() {
           </div>
         </div>
       </SectionWrapper>
-       {/* Core Values */}
+      )}
+
+      {/* Core Values */}
+      {coreValues?.isActive !== false && (
       <SectionWrapper bg="bg-white" padding="py-section">
         <SectionHeader
-          badge="Our Values"
-          title="Core Values"
-          description={`The principles that guide everything we do at ${identity.shortName}.`}
+          badge={coreValues.eyebrow}
+          title={coreValues.title}
+          description={coreValues.description}
         />
         <div ref={valuesRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
-          {values.map((value) => (
+          {(coreValues.values ?? []).map((value) => (
             <div key={value.title} className="text-center p-7 rounded-xl bg-cream-50 border border-charcoal-100/60 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-premium">
               <span className="text-4xl mb-4 block">{value.icon}</span>
               <h4 className="font-heading text-h3 text-charcoal-900 mb-2">{value.title}</h4>
@@ -98,9 +113,10 @@ function About() {
           ))}
         </div>
       </SectionWrapper>
+      )}
 
       {/* Vision & Mission */}
-
+      {visionMission?.isActive !== false && (
       <SectionWrapper bg="bg-cream-50" padding="py-section">
         <div ref={vmRef} className="reveal py-10">
           <div className="grid md:grid-cols-2 gap-8">
@@ -112,7 +128,7 @@ function About() {
                 <h3 className="font-heading text-h3 text-charcoal-900">Our Vision</h3>
               </div>
               <p className="text-charcoal-500 leading-relaxed">
-                [Vision statement placeholder — Replace with the school&apos;s verified vision statement.]
+                {visionMission.vision}
               </p>
             </Card>
 
@@ -124,15 +140,13 @@ function About() {
                 <h3 className="font-heading text-h3 text-charcoal-900">Our Mission</h3>
               </div>
               <p className="text-charcoal-500 leading-relaxed">
-                [Mission statement placeholder — Replace with the school&apos;s verified mission statement.]
+                {visionMission.mission}
               </p>
             </Card>
           </div>
         </div>
       </SectionWrapper>
-
-     
-      
+      )}
     </>
   );
 }

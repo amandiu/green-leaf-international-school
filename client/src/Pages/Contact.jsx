@@ -5,6 +5,7 @@ import { SectionWrapper } from '../Components/ui/SectionWrapper';
 import Button from '../Components/ui/Button';
 import BrandBlock from '../Components/ui/BrandBlock';
 import { buildMapsUrls } from '../../../shared/utils/mapsUrls';
+import usePageSeo from '../hooks/usePageSeo';
 
 function ContactHero() {
   const { settings } = useSettings();
@@ -35,6 +36,14 @@ function ContactHero() {
 }
 
 function Contact() {
+  // Phase B.7: per-page metadata.
+  usePageSeo({
+    title: 'Contact Us',
+    description:
+      'Contact Green Leaf International School & College — address, phone, email, office hours, location map and inquiry form.',
+    path: '/contact',
+  });
+
   const { settings } = useSettings();
   const { identity, branding, contact, social, location } = settings;
   // Shared builder (Phase C): same central source as the Homepage map.
@@ -109,6 +118,8 @@ function Contact() {
   });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState(null);
 
   const infoRef = useScrollReveal();
   const formRef = useScrollReveal();
@@ -130,14 +141,47 @@ function Contact() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const handleSubmit = (e) => {
+  /* Phase B.1: the form now POSTs to /api/contact. Client-side
+     validation stays as the fast feedback layer; the server
+     re-validates everything (never trusted from the client).
+     Duplicate submissions are prevented with the `submitting`
+     guard (button disabled while in flight). */
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return; // duplicate-submission guard
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
-    setSubmitted(true);
+    setSubmitting(true);
+    setServerError(null);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          subject: formData.subject,
+          message: formData.message,
+        }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.success) {
+        // Safe server messages only — internals never leak (the
+        // API guarantees a generic 500 body; 400s are field-level).
+        throw new Error(payload?.message || 'Your message could not be sent right now. Please try again later.');
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setServerError(
+        err?.message || 'Your message could not be sent right now. Please try again later.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -205,8 +249,8 @@ function Contact() {
                 </div>
                 <h3 className="font-heading text-h3 text-charcoal-900 mb-2">Message Sent!</h3>
                 <p className="text-charcoal-500 text-body-sm mb-6">
-                  Thank you for reaching out. We&apos;ll get back to you soon.<br />
-                  <span className="text-charcoal-400 italic text-caption">(This is a placeholder — actual submission will be connected in Phase 8)</span>
+                  Thank you for reaching out. We&apos;ve received your message and
+                  the school office will get back to you soon.
                 </p>
                 <Button variant="secondary" size="sm" onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', subject: '', message: '' }); }}>
                   Send Another Message
@@ -217,6 +261,13 @@ function Contact() {
                 <h2 className="font-heading text-h2 text-charcoal-900 mb-6">
                   Send Us a Message
                 </h2>
+
+                {/* Server-side rejection (safe message only — no internals) */}
+                {serverError && (
+                  <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-body-sm text-red-700">
+                    {serverError}
+                  </div>
+ )}
 
                 <div className="grid sm:grid-cols-2 gap-4 mb-4">
                   <div>
@@ -297,13 +348,15 @@ function Contact() {
                   {errors.message && <p className="text-caption text-red-500 mt-1">{errors.message}</p>}
                 </div>
 
-                <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto">
-                  Send Message
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Sending…' : 'Send Message'}
                 </Button>
-
-                <p className="mt-3 text-caption text-charcoal-400 italic">
-                  Form submission will be connected to the backend API in Phase 8.
-                </p>
               </form>
             )}
           </div>
