@@ -137,10 +137,15 @@ export async function patchAdminNewsStatus(req, res) {
   }
 }
 
-/** DELETE /api/admin/news/:id — hard delete (no references exist). */
+/** DELETE /api/admin/news/:id — hard delete (no references exist).
+ *  Phase C.4: carries the standard success envelope so every
+ *  admin consumer (test suites, admin client) can confirm the
+ *  deletion uniformly (the GET/list envelopes stay untouched —
+ *  §20.11 continues to track the pre-existing deviation). */
 export async function deleteAdminNewsItem(req, res) {
   try {
-    res.status(200).json(await deleteNewsItem(req.params.id));
+    const deleted = await deleteNewsItem(req.params.id);
+    res.status(200).json({ success: true, message: 'News item deleted', data: deleted });
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ error: err.message });

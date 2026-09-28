@@ -73,6 +73,17 @@ ok(!locs.some((loc) => /\/admin|\/login|\/dashboard/.test(new URL(loc).pathname)
 ok(new Set(locs).size === locs.length, 'no duplicate URLs (Step 17)');
 ok(!locs.some((loc) => loc.includes('?')), 'no query-string URLs in sitemap');
 
+// Sitemap origin rule: NO resolvable origin → valid EMPTY urlset
+// (never relative <loc> values, never an invented origin).
+const { buildSitemapXml } = await import('../server/src/utils/sitemapXml.js');
+const empty = buildSitemapXml([{ loc: '/about' }], null);
+ok(empty.includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+  && !empty.includes('<loc>'), 'no-origin sitemap → empty urlset (no relative <loc>)');
+const withOrigin = buildSitemapXml([{ loc: '/about', priority: '0.8' }], 'https://prod.example.org');
+ok(withOrigin.includes('<loc>https://prod.example.org/about</loc>'), 'origin-resolved <loc> values');
+ok(withOrigin.includes('&amp;') === false, 'no raw ampersands in escaped output');
+ok(buildSitemapXml([{ loc: '/a?b&c<d' }], 'https://prod.example.org').includes('&amp;'), 'XML escaping applied');
+
 // ============ 3. JSON-LD builders — verified data only ============
 console.log('\n[3] JSON-LD builders (shared/utils/seoJsonLd.js)');
 const { buildOrganizationSchema, buildWebSiteSchema, buildNewsArticleSchema, toJsonLdScriptContent }
@@ -184,6 +195,16 @@ const docTitleWrites = execSync(
   'grep -rn "document.title" client/src --include="*.jsx" --include="*.js"', { encoding: 'utf8' },
 ).trim().split('\n').filter((l) => !l.includes('branding.js'));
 ok(docTitleWrites.length === 0, `no competing document.title writes (found ${docTitleWrites.length})`);
+
+// applyBranding's global settings sync must NOT stomp page-owned
+// og:type/og:image while a page-level SEO effect is mounted
+// (News detail: og:type=article + item image, not website/logo).
+ok(
+  /if \(!isPageSeoActive\(\)\) \{[\s\S]*?og:image/.test(
+    readFileSync('client/src/utils/branding.js', 'utf8'),
+  ),
+  'applyBranding does not stomp page-owned og:type/og:image',
+);
 ok(existsSync('shared/config/seoConfig.js') && existsSync('shared/utils/seoJsonLd.js'),
   'shared SEO config + JSON-LD builders exist');
 

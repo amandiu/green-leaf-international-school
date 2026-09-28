@@ -34,12 +34,25 @@ function sign(payloadB64) {
   return createHmac('sha256', getSecret()).update(payloadB64).digest('base64url');
 }
 
-/** Issue a signed session token for an admin user. */
+/**
+ * Issue a signed session token for an admin user.
+ *
+ * Phase C.4 (§AN.7): the payload gains the format-compatible claims
+ *   roles — canonical role CODES at issue time (from user_roles);
+ *   pwdAt — users.password_changed_at (epoch ms) at issue time, or
+ *           null when never changed. attachSessionUser compares it
+ *           against the LIVE value so a password change invalidates
+ *           every previously issued session WITHOUT a session store.
+ * No credential material or profile data beyond id/email/name is
+ * ever placed in the payload.
+ */
 export function createSessionToken(user) {
   const payload = {
     sub: user.id,
     email: user.email,
     name: user.name ?? null,
+    roles: Array.isArray(user.roles) ? user.roles : [],
+    pwdAt: user.pwdAt ?? null,
     iat: Date.now(),
     exp: Date.now() + SESSION_TTL_MS,
   };
@@ -68,6 +81,13 @@ export function verifySessionToken(token) {
     return null;
   }
   if (typeof payload?.exp !== 'number' || payload.exp < Date.now()) return null;
+  // Cutover invariant (§AN.14): every session token must carry the
+  // canonical claims. Legacy pre-cutover tokens (sub = admin_users.id,
+  // no roles/pwdAt keys) are rejected here — they were all stamped
+  // invalid anyway when the copy set users.password_changed_at.
+  // pwdAt MAY legitimately be null (a user that never changed its
+  // password); the key must simply EXIST.
+  if (!Array.isArray(payload.roles) || !('pwdAt' in payload)) return null;
   return payload;
 }
 

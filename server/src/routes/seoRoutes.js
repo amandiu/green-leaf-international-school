@@ -11,14 +11,20 @@
 //               draft/archived/unknown slugs can never appear).
 //
 // No auth, no mutation, no user input — both endpoints answer
-// from fixed config + DB reads only. Errors fall back to the
+// from fixed config + DB reads only. DB errors fall back to the
 // static-route-only sitemap so the file never 500s.
+//
+// Origin rule: with NO resolvable origin the sitemap is served
+// as a valid EMPTY urlset (buildSitemapXml) — relative <loc>
+// values are invalid per the sitemap protocol and a fake origin
+// would be worse than none. Same conservative rule as the client
+// (canonical/og:url tags are simply omitted without an origin).
 // ------------------------------------------------------------
 
 import { Router } from 'express';
 import { getSiteUrl, SEO_ROUTES, SEO_DISALLOWED_PATHS } from '../../../shared/config/seoConfig.js';
 import { findPublishedNewsSlugs } from '../models/NewsItem.js';
-import pool from '../config/db.js';
+import { buildSitemapXml } from '../utils/sitemapXml.js';
 
 const router = Router();
 
@@ -38,16 +44,6 @@ router.get('/robots.txt', (req, res) => {
   res.set('Cache-Control', 'public, max-age=3600');
   res.send(lines.join('\n'));
 });
-
-/** XML-escape one text node or attribute value. */
-function xmlEscape(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
 
 /**
  * Published news detail URLs. PUBLISHED-only via the model query.
@@ -73,15 +69,6 @@ async function publishedNewsSitemapEntries() {
   }
 }
 
-/** Sitemap <url> entry from { loc, lastmod?, changefreq?, priority? }. */
-function sitemapUrlXml({ loc, lastmod, changefreq, priority }) {
-  const parts = [`    <loc>${xmlEscape(loc)}</loc>`];
-  if (lastmod) parts.push(`    <lastmod>${xmlEscape(lastmod)}</lastmod>`);
-  if (changefreq) parts.push(`    <changefreq>${xmlEscape(changefreq)}</changefreq>`);
-  if (priority) parts.push(`    <priority>${xmlEscape(priority)}</priority>`);
-  return `  <url>\n${parts.join('\n')}\n  </url>`;
-}
-
 /** GET /sitemap.xml — valid XML, one canonical URL per resource. */
 router.get('/sitemap.xml', async (req, res) => {
   const siteUrl = getSiteUrl();
@@ -92,27 +79,11 @@ router.get('/sitemap.xml', async (req, res) => {
     priority: route.priority,
   })).concat(await publishedNewsSitemapEntries());
 
-  if (!siteUrl) {
-    // No origin configured — serve the static-routes-only sitemap
-    // rather than relative <loc> values (invalid for crawlers).
-    res.set('Content-Type', 'application/xml; charset=utf-8');
-    res.set('Cache-Control', 'public, max-age=3600');
-    res.status(200);
-    const urls = entries.map(sitemapUrlXml).join('\n');
-    res.send(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`,
-    );
-    return;
-  }
-
-  const urls = entries
-    .map((entry) => sitemapUrlXml({ ...entry, loc: `${siteUrl}${entry.loc}` }))
-    .join('\n');
+  // buildSitemapXml emits an EMPTY urlset when siteUrl is null —
+  // never relative <loc> values, never an invented origin.
   res.set('Content-Type', 'application/xml; charset=utf-8');
   res.set('Cache-Control', 'public, max-age=3600');
-  res.status(200).send(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9\">\n${urls}\n</urlset>\n`,
-  );
+  res.status(200).send(buildSitemapXml(entries, siteUrl));
 });
 
 export default router;

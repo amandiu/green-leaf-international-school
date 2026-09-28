@@ -8,12 +8,22 @@
 //     unknown) so response timing does not reveal which part failed
 //   - one generic error message for unknown email / wrong password
 //   - password hashes never leave this module
+//
+// Phase C.4 (§AN.14): the authentication source is the CANONICAL
+// `users` table (sub = users.id). admin_users remains as a legacy
+// read-only reference (kept, never dropped) — it is no longer read
+// by the login path. The admin login endpoint still only issues a
+// session to identities holding the seeded `admin` role (a
+// login-service boundary check, NOT requireRole/C7 middleware).
 // ------------------------------------------------------------
 
 import bcrypt from 'bcryptjs';
-import { findByEmailWithHash, findSafeById, createAdmin, emailExists, countAdmins } from '../models/AdminUser.js';
+import pool from '../config/db.js';
+import { findByEmailWithHash, findSafeById } from '../models/User.js';
+import { findRoleCodesByUserId } from '../models/UserRole.js';
+import { createUser } from './identityService.js';
 import { createSessionToken } from '../utils/sessionToken.js';
-import { badRequest, unauthorized, conflict } from '../utils/errors.js';
+import { badRequest, unauthorized } from '../utils/errors.js';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -37,6 +47,13 @@ function normalizeCredentials(input) {
 /**
  * Verify credentials and return { user, token } on success.
  * Throws a generic 401 on any credential mismatch.
+ *
+ * Phase C.4 cutover (§AN.14): the lookup source is the canonical
+ * `users` table; the session subject is the canonical users.id.
+ * The session is issued only to identities whose resolved role
+ * codes include `admin` — a non-admin canonical identity must not
+ * obtain an admin session through this endpoint (no enumeration:
+ * every failure below returns the SAME generic 401).
  */
 export async function login(input) {
   const { email, password } = normalizeCredentials(input);
@@ -47,7 +64,18 @@ export async function login(input) {
   const hash = row?.password_hash || DUMMY_HASH;
   const passwordOk = await bcrypt.compare(password, hash);
 
-  if (!row || !passwordOk || row.is_active !== 1) {
+  // Canonical role resolution — only reached when the row exists.
+  let roleCodes = [];
+  if (row) {
+    roleCodes = await findRoleCodesByUserId(row.id);
+  }
+
+  if (
+    !row
+    || !passwordOk
+    || Number(row.is_active) !== 1
+    || !roleCodes.includes('admin')
+  ) {
     throw unauthorized(GENERIC_CREDENTIALS);
   }
 
@@ -55,11 +83,19 @@ export async function login(input) {
     id: row.id,
     email: row.email,
     name: row.name,
+    roles: roleCodes,
+    pwdAt: row.password_changed_at ? new Date(row.password_changed_at).getTime() : null,
   };
   return { user, token: createSessionToken(user) };
 }
 
-/** Current admin profile (safe columns) for /api/auth/me. */
+/**
+ * Current admin profile (safe columns) for /api/auth/me.
+ *
+ * Phase C.4: resolves through the CANONICAL users table (the token
+ * `sub` is users.id). Re-reads the live row so deactivation or
+ * deletion takes effect immediately.
+ */
 export async function getAdminProfile(userId) {
   const user = await findSafeById(userId);
   if (!user || user.is_active !== true) {
@@ -73,28 +109,36 @@ export async function getAdminProfile(userId) {
 // One-time setup script support (npm run admin:create)
 // ------------------------------------------------------------
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Validate + create an admin account from the setup script. */
+/**
+ * Create an admin account from the setup script.
+ *
+ * Phase C.4 (§AN.14): creation is CANONICAL — the account is a
+ * users row (+ exactly-one primary `admin` role) so it can log in
+ * against the cutover authentication source. The C2 identity
+ * service performs the validation/transaction (bcrypt-12, email
+ * normalization, duplicate 409). A pre-cutover admin_users row
+ * with the same email makes the copy gate report a CONFLICT (the
+ * duplicate is audited, never silently merged) — create the
+ * legacy account first, then re-run the copy before login.
+ */
 export async function createAdminAccount({ email, password, name }) {
-  const cleanEmail = String(email || '').trim().toLowerCase();
-  if (!EMAIL_RE.test(cleanEmail)) {
-    throw badRequest('Enter a valid email address');
-  }
-  if (typeof password !== 'string' || password.length < 8) {
-    throw badRequest('Password must be at least 8 characters');
-  }
-  const cleanName = String(name || '').trim() || null;
-
-  if (await emailExists(cleanEmail)) {
-    throw conflict('An admin account with this email already exists');
-  }
-
-  const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  return createAdmin({ email: cleanEmail, password_hash, name: cleanName });
+  return createUser(
+    { email, name, roles: ['admin'], primaryRole: 'admin' },
+    { password },
+  );
 }
 
-/** How many admins exist (setup script decision hint). */
+/**
+ * How many admins exist (setup script decision hint).
+ * Phase C.4: the CANONICAL admin count — post-cutover the login
+ * source is users, so the bootstrap hint must reflect canonical
+ * identities (a legacy-only count would mislead a fresh setup).
+ */
 export async function adminCount() {
-  return countAdmins();
+  const [rows] = await pool.query(
+    'SELECT COUNT(DISTINCT `ur`.`user_id`) AS n FROM `user_roles` `ur`'
+      + ' JOIN `roles` `r` ON `r`.`id` = `ur`.`role_id` WHERE `r`.`code` = ?',
+    ['admin'],
+  );
+  return rows[0].n;
 }

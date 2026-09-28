@@ -20,20 +20,57 @@
 import { verifySessionToken } from '../utils/sessionToken.js';
 import { SESSION_COOKIE_NAME } from '../utils/cookieSession.js';
 import { unauthorized } from '../utils/errors.js';
+import { findLivePwdAt } from '../models/User.js';
+
+/**
+ * LIVE password_changed_at state for one canonical id (three
+ * distinguishable values — see User.findLivePwdAt):
+ *   undefined → row missing (unknown session subject → deny)
+ *   null      → never stamped (VALID; matches a token pwdAt of null)
+ *   number    → epoch ms (must EQUAL the token's pwdAt)
+ */
+async function livePwdAt(canonicalId) {
+  return findLivePwdAt(canonicalId);
+}
 
 const BEARER_CONFIGURED = Boolean(process.env.ADMIN_TOKEN);
 
-/** Attach req.adminUser when a valid session cookie is present. */
-export function attachSessionUser(req, _res, next) {
+/**
+ * Attach req.adminUser when a valid session cookie is present.
+ *
+ * Phase C.4 (§AN.7/§AN.14): `sub` is now the CANONICAL users.id and
+ * the token carries `roles` + `pwdAt`. The middleware re-reads the
+ * live users.password_changed_at and rejects the session when it no
+ * longer matches the token's pwdAt (password-change invalidation
+ * without a session store). The deactivation/deletion check stays
+ * in the /me profile re-read (as before). Fail-closed: unknown id,
+ * malformed id or unreadable password_changed_at → no identity.
+ */
+export async function attachSessionUser(req, _res, next) {
   const token = req.cookies?.[SESSION_COOKIE_NAME];
   if (token) {
     const payload = verifySessionToken(token);
     if (payload) {
-      // The signed token stores the user id JWT-style as `sub`;
-      // expose it as `id` so controllers can use req.adminUser.id
-      // (without this mapping /api/auth/me can never resolve the
-      // live profile and every refresh drops the session UI).
-      req.adminUser = { ...payload, id: payload.sub };
+      const live = await livePwdAt(payload.sub);
+      // undefined = row missing / malformed id → fail closed.
+      // Otherwise: live must EQUAL the token's pwdAt — where both
+      // being null ("never changed") is a MATCH, and any stamp
+      // mismatch (password changed since issue) is a MISMATCH = 401
+      // (§AN.7 invalidation without a session store).
+      if (live !== undefined && live === (payload.pwdAt ?? null)) {
+        // The signed token stores the canonical user id JWT-style as
+        // `sub`; expose it as `id` so controllers can use
+        // req.adminUser.id (without this mapping /api/auth/me can
+        // never resolve the live profile and every refresh drops
+        // the session UI).
+        //
+        // req.adminUser is the LONG-ESTABLISHED identity consumer
+        // shape (authController getMe + the server.js rate-limit
+        // key read it pre-cutover). Under the users-cutover its
+        // values are CANONICAL: id = users.id, roles = the C4
+        // roles claim — no router or CMS controller changes.
+        req.adminUser = { ...payload, id: payload.sub };
+      }
     }
   }
   next();

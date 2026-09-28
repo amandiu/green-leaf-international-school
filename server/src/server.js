@@ -58,6 +58,15 @@ app.use(cookieParser());
 app.use(attachSessionUser);
 app.use(jsonBodyErrorHandler);
 
+// CSRF baseline (Phase C.4, §AN.9): cheap Origin/Referer validation
+// for state-changing requests to the authenticated surfaces
+// (/api/auth/*, /api/admin/*). Safe methods pass; no Origin+Referer
+// → allowed (script/curl consumers); present-but-unallowlisted
+// Origin/Referer → 403. Mounted ONCE here — no per-route CSRF logic.
+import { originRefererGuard } from './middleware/originGuard.js';
+app.use('/api/auth', originRefererGuard);
+app.use('/api/admin', originRefererGuard);
+
 // Rate limiting (global API limiter)
 //
 // Bucket key: the AUTHENTICATED ADMIN IDENTITY when a valid session

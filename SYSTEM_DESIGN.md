@@ -95,7 +95,10 @@ client/src/
 - `BrowserRouter`; all public routes nested under a single `Layout` route
   (fixed 3-row navbar + footer + page transitions + `SettingsHeadSync`).
 - Routes: `/` (HomeContentProvider-wrapped), `/about`, `/academics`,
-  `/admissions`, `/campus`, `/news`, `/news/:slug`, `/contact`.
+  `/admissions`, `/campus`, `/teachers` (B.5), `/downloads` (B.6),
+  `/gallery` (B.2), `/news`, `/news/:slug`, `/contact`.
+- Every indexable page mounts the ONE per-page SEO hook
+  (`usePageSeo` — see AG for the metadata/canonical/JSON-LD behavior).
 - **CURRENT GAP:** there is NO `*` catch-all route — unknown public URLs render
   the layout with an empty content area (the admin SPA has a `*` fallback; the
   public site does not). Tracked as MASTER_PLAN §20.10, fix in Phase A.
@@ -184,6 +187,7 @@ server/src/
 | GET /api/admin/contact-messages/:id | admin | one message |
 | PATCH /api/admin/contact-messages/:id/status | admin | lifecycle: NEW/READ/REPLIED/ARCHIVED |
 | DELETE /api/admin/contact-messages/:id | admin | hard delete (nothing references contact rows) |
+| (no identity routes) | — | **Phase C.2**: identity foundation is service-level ONLY — no /api/users or /api/admin/users route exists (verified 404); C4 cutover changes /api/auth internals; /api/admin/users arrives with C6 |
 
 Unknown routes → JSON 404. Errors → `{ success:false, message }` (news: `{error}`);
 production 500s are generic (details logged server-side only).
@@ -239,6 +243,14 @@ Login form (admin SPA)
 
 Exactly one implicit role exists — *authenticated admin*. There is no
 roles/permissions table and no role column on `admin_users`.
+
+> **Phase C.2 note (2026-09-27):** the IDENTITY FOUNDATION for future RBAC
+> now EXISTS as tables + service layer (`roles` / `users` / `user_roles` /
+> `role_permissions` — migrations 013–016, see §AN.3) but NO authentication
+> path or middleware reads them yet: the login flow, adminAuth gate and
+> session mechanism are UNCHANGED and remain admin_users-based until the
+> C4 cutover. `user_roles` is the assignment source future middleware
+> consumes; `role_permissions` ships empty by design (enforcement = C7).
 
 Enforcement model:
 - Binary gate: `adminAuth` middleware on every `/api/admin/*` router (fail-closed).
@@ -308,15 +320,15 @@ CURRENT / VERIFIED:
 
 - **Engine:** MySQL 8+ / MariaDB 10.4+ (XAMPP-compatible), database
   `greenleaf_school` (`DB_NAME`), charset `utf8mb4` / `utf8mb4_unicode_ci`.
-- **Migrations:** plain SQL files `server/sql/migrations/001–009`, run by
+- **Migrations:** plain SQL files `server/sql/migrations/001–016`, run by
   `src/scripts/dbRun.js` (`npm run db:migrate`), tracked in a
   `schema_migrations` table (applied once per DB, transactional per file,
   deterministic filename order, dedicated multi-statement connection for the
   tracked repo files only). `{{DATABASE_NAME}}` placeholder is substituted
   from env. Seeds run the same way into `schema_seeds`.
-- **Seeds:** `server/sql/seeds/001–005` (7 navigation items, leadership
+- **Seeds:** `server/sql/seeds/001–006` (7 navigation items, leadership
   section shell — NO fabricated identities, 24 site settings, home sections,
-  admissions CTA block).
+  admissions CTA block, 4 identity role catalog rows — Phase C.2).
 - **Data-safety rules baked into migrations:** no fabricated identities,
   CHECK constraints duplicate ENUM validation for non-strict MariaDB servers,
   FKs RESTRICT parent deletion with children, unique keys are case-insensitive
@@ -593,7 +605,10 @@ PROPOSED (future portal/academic relationships — see L).
 `admin_users`, `navigation_items`, `leadership_sections`, `leadership_messages`,
 `site_settings`, `page_sections`, `content_blocks`, `news_items`,
 `contact_messages` (migration 010, Phase B.1), `gallery_items` (migration 011,
-Phase B.2)
+Phase B.2), `downloads` (migration 012, Phase B.6), `roles` / `users` /
+`user_roles` / `role_permissions` (migrations 013–016, Phase C.2 identity
+foundation — see §AN.3/§AN.13; NOT yet read by any authentication path:
+cutover is C4)
 (+ runner tracking tables `schema_migrations`, `schema_seeds`).
 
 Rules: additive idempotent migrations only; no table/column renames without a
@@ -621,6 +636,7 @@ migration required?
 | `assignments` / `questions` / `answers` | homework + question bank (WT questions/answers) | N:1 class_subject + teacher; questions 1:N answers | Phase J; needs E, G | NEW | Yes |
 | `exams` / `marks` / `results` / `merit_lists` | exam cycles (WT/half-yearly/annual), per-student subject marks, published results, merit lists | exams 1:N marks; marks N:1 (student, exam, class_subject); results per student+exam | Phase K; needs F, G, J | NEW | Yes |
 | `attendance` / `leave_requests` | daily per-student status; leave workflow (applied/reviewed) | N:1 students + class + date; leave N:1 student, reviewed by teacher/admin | Phase I; needs E, F, G | NEW | Yes |
+| ~~`users` / `roles` / `user_roles` / `role_permissions`~~ | **DONE (Phase C.2)** — now CURRENT (migrations 013–016; see §AN.3/§AN.13): canonical identity + role catalog + multi-role junction + permission-key map. NO authentication path reads them yet (cutover C4); permission enforcement C7 | users ← user_roles → roles ← role_permissions | Phase C (done) | SHIPPED | 013–016 |
 | `notice_targets` | role-targeted notices (news_items extension: role/audience column or junction) | N:1 news_items | Phase N; may extend news_items (reuse!) rather than a new entity if a simple `audience` column suffices | REUSE news_items + additive column, or NEW junction for multi-target | Yes |
 | `admission_applications` | online applications (applicant info, class applied, status workflow) | N:1 classes | Phase L; needs E | NEW | Yes |
 | `fee_structures` | PUBLIC fee definitions per class/type | N:1 classes | Phase M (public part independent) | NEW | Yes |
@@ -1107,16 +1123,118 @@ PROPOSED: route-level code splitting, upload cache headers, skeleton loading,
 DB query review when academic data scales (indexes already defined for the hot
 public queries).
 
-## AG. SEO Architecture
+## AG. SEO Architecture (Phase B.7 — CURRENT / VERIFIED)
 
-- Central seo settings (title/description) applied by `SettingsHeadSync` +
-  `utils/branding.js` (title, favicon, OG tags) — DB-backed with config
-  fallback; first-paint branding applied in `main.jsx` before data arrives.
-- Single-page meta today (no per-route meta, no sitemap, no JSON-LD); missing
-  public 404 route hurts SEO hygiene (MASTER_PLAN §20.10).
-- **PROPOSED (Phase B):** per-page meta map, canonical URLs, robots.txt +
-  sitemap.xml, Organization/School/NewsArticle JSON-LD, and prerendering
-  evaluation for `/news/:slug` shareability.
+One SEO layer, three shared building blocks, no competing implementations:
+
+| Building block | File | Role |
+|---|---|---|
+| Route inventory + origin resolution | `shared/config/seoConfig.js` | `SEO_ROUTES` (the 10 static indexable paths + changefreq/priority), `SEO_DISALLOWED_PATHS`, `getSiteUrl()` (`SITE_URL` → `CLIENT_URL` → `siteConfig.seo.siteUrl`, may be null), `buildCanonicalUrl()` |
+| JSON-LD builders | `shared/utils/seoJsonLd.js` | `buildOrganizationSchema` / `buildWebSiteSchema` / `buildNewsArticleSchema`, `toJsonLdScriptContent` (escapes `<`) — verified-data-only |
+| Sitemap XML assembly | `server/src/utils/sitemapXml.js` | Pure `buildSitemapXml()` / `xmlEscape()` — no-origin → EMPTY urlset |
+
+**Per-page metadata (one mechanism).** Every indexable page calls
+`usePageSeo({ title, description, path, item?, ogType?, ogImage? })`
+(`client/src/hooks/usePageSeo.jsx`) → `applyPageSeo()`
+(`client/src/utils/branding.js`), which owns ALL head writes for the page:
+title (org name appended), meta description, canonical link, `og:title/`
+`description/type/url/image`, Twitter card set, and the page's JSON-LD
+scripts (marked `data-seo-page`). Unmount runs `restoreGlobalSeo` —
+navigation leaves zero page-scoped tags behind. The global
+`SettingsHeadSync` (settings arrival) is guard-integrated: while a page
+SEO effect is mounted (`isPageSeoActive()`) it syncs NOTHING page-owned
+(title/description/OG — including og:type/og:image); it only applies
+branding when no page owns the head, so the DB settings overlay can never
+stomp a mounted page's metadata. No other file writes `document.title`.
+
+**Route inventory (verified against `client/src/App.jsx`):** `/` Home,
+`/about`, `/academics`, `/admissions`, `/campus`, `/teachers`,
+`/downloads`, `/gallery`, `/news`, `/news/:slug` (dynamic), `/contact`
+— 11 routed pages, all indexable, each with a unique intentional title +
+description via `usePageSeo`. NO public catch-all route exists yet
+(§20.10/§AM.2); unknown paths render the layout — they carry NO canonical
+and are NOT in the sitemap, so they cannot create duplicate URLs.
+
+**Canonical strategy.** Canonical = `getSiteUrl()` + stable route path.
+Origin resolution is explicit: `SITE_URL` (production) → `CLIENT_URL`
+(dev convenience) → `siteConfig.seo.siteUrl` fallback (null). NO origin →
+client omits canonical/og:url entirely (no relative URLs, no invented
+origin) and the server serves an EMPTY sitemap urlset without a robots
+`Sitemap:` line — localhost is never hardcoded. Filtered views are
+canonicalized to the hub: `/news?type=…` and `/news?upcoming=true` pages
+declare canonical `/news` (News.jsx uses the fixed path) and query strings
+never enter the sitemap — no duplicate-URL farming. News detail canonical
+= the item's own `/news/<slug>` (slug is the stable unique key).
+
+**robots.txt** (`GET /robots.txt`, server routes `server/src/routes/
+seoRoutes.js` mounted at `/`): `User-agent: *` + `Disallow:` for
+`/admin`, `/api`, `/login`, `/dashboard` (from `SEO_DISALLOWED_PATHS`);
+`Sitemap:` line only when an origin resolves; `Cache-Control: public,
+max-age=3600`. Public pages/assets are never blocked (uploads live under
+`/api/uploads` — intentionally disallowed from crawling but not from
+rendering; images render client-side regardless).
+
+**sitemap.xml** (`GET /sitemap.xml`): the 10 static routes from
+`SEO_ROUTES` + one URL per PUBLISHED news item (slugs via
+`findPublishedNewsSlugs` — `WHERE status='PUBLISHED'` enforced in SQL, so
+DRAFT/ARCHIVED rows can never appear; capped at 5000; DB failure →
+static routes only, never a 500). URLs are absolute
+(origin-resolved), deduplicated, query-free, XML-escaped, with the
+protocol-correct no-origin behavior above. Vite dev proxies
+`/robots.txt` + `/sitemap.xml` to :5000 so both resolve on the public
+dev origin; production must map them to the API (same reverse proxy
+that maps `/api`).
+
+**JSON-LD (conservative-by-design).** Emitted per page by `usePageSeo`:
+- `EducationalOrganization` — name, url, logo, description, address,
+  telephone, sameAs — each property ONLY when verified (placeholder
+  strings like `[Phone Number]`, empty values, and non-https URLs are
+  omitted; no invented postal code/geo/opening hours/ratings).
+- `WebSite` — name + url.
+- `NewsArticle` (detail pages with a loaded published item) — headline,
+  description (excerpt), image, datePublished/dateModified,
+  mainEntityOfPage, publisher (org name). Built ONLY from the public
+  detail payload (the endpoint serves PUBLISHED rows only — drafts can
+  never reach the builder).
+- Event schema: deliberately NOT implemented — the news `Event Date:`
+  line provides a date but no verified venue/location data exists.
+  Revisit with venue data.
+- BreadcrumbList: deliberately NOT implemented — no breadcrumb UI
+  exists in the current routes (schema must mirror visible UI).
+
+**Dynamic News detail SEO.** Loading/not-found/API-failure states render
+NEUTRAL metadata ("News" title + `/news` canonical + no article schema);
+only a successfully fetched published item swaps in its own title,
+excerpt, image, dates, `og:type=article`, canonical `/news/<slug>` and
+NewsArticle JSON-LD. DRAFT/ARCHIVED/nonexistent slugs are 404 at the API
+layer, so unpublished content can never leak through metadata, OG tags,
+JSON-LD, or the sitemap (all verified by the test script's live probe).
+
+**Social metadata.** OG tags per page (title/description/type/url/image)
++ Twitter `summary_large_image` card (card/title/description/image).
+Images: news item image when present, else the global OG image
+(settings `branding.ogImage`), absolutized against the resolved origin
+(omitted when relative without origin).
+
+**SPA indexing limitation (honest statement — no SSR introduced).**
+This is a React 18 + Vite SPA: metadata is set at RUNTIME. Any crawler
+that executes JavaScript (Google, Bing, modern social scrapers that run
+headless browsers) receives the full per-page metadata. Crawlers or
+unfurlers that read only the static HTML see `client/index.html`'s
+fallback title/description on every route — dynamic news titles/OG
+images will NOT be visible to them. This is the accepted Phase B trade
+-off; server-side route fallback/prerendering for `/news/:slug` remains
+a future evaluation (MASTER PLAN §16), NOT part of B.7. No SSR was
+introduced.
+
+**Verification:** `scripts/test-seo-api.mjs` — 70 checks: robots
+validity/allowlist, sitemap validity + hygiene (absolute URLs, no
+api/admin/query URLs, no duplicates, origin resolution, empty-urlset
+rule, escaping), JSON-LD builder guarantees (verified-data-only,
+placeholder omission, script-escape safety), getSiteUrl precedence,
+live draft/archived/deleted/nonexistent sitemap-leak probes (via admin
+API), and repo wiring (all 11 pages use the ONE hook; no competing
+`document.title` writes; og-stomp guard in place).
 
 ## AH. Deployment Architecture
 
@@ -1186,8 +1304,10 @@ docs/DEPLOYMENT.md (§20.2).
 
 ## AM. Known Architectural Limitations
 
-1. **SPA-only rendering** — crawlers/social previews get minimal HTML for
-   detail routes (no SSR/prerender yet).
+1. **SPA-only rendering** — metadata is applied at RUNTIME (`usePageSeo`,
+   Phase B.7): JS-executing crawlers get full per-page metadata, but
+   static-HTML-only crawlers see the index.html fallback on every route;
+   no SSR/prerender yet (deliberate — see AG for the honest breakdown).
 2. **No public 404 route** — unknown URLs render an empty layout (Phase A fix).
 3. **Hand-rolled multipart parser** — single-file scope only; replace if
    multi-file or field-rich uploads arrive.
@@ -1214,6 +1334,355 @@ docs/DEPLOYMENT.md (§20.2).
 11. **No automated tests** — regression safety currently depends on lint +
     manual scripts only.
 12. **Response-envelope inconsistency** in the news module (MASTER_PLAN §20.11).
+
+## AN. Authentication & Identity Architecture — Phase C Design
+
+> **STATUS: AUDIT + DESIGN (C1, 2026-09-27); identity foundation (C2)
+> IMPLEMENTED 2026-09-27; ownership/linking seams (C3) IMPLEMENTED
+> 2026-09-27; AUTHENTICATION CUTOVER (C4) IMPLEMENTED + LIVE-VERIFIED
+> 2026-09-28.** CURRENT / VERIFIED: §AN.1, §AN.3 (models/service/
+> validator), §AN.13 tables 1–4, and the C4 cutover surface — §AN.7
+> claims + pwdAt invalidation, §AN.9 Origin/Referer baseline, §AN.10
+> email identifier, §AN.14 copy + gate + users-canonical login (all
+> verified by `scripts/test-c4-cutover.mjs`, 55/55, live server + DB).
+> Everything else in this section (§AN.5 permission keys beyond the
+> empty table, §AN.8 password reset, §AN.11 future endpoints, §AN.12
+> future limit values, §AN.15–AN.18) remains **PROPOSED / FUTURE**.
+> Where this section refines earlier PROPOSED notes (G, L), THIS
+> section is authoritative.
+
+### AN.1 Current state (CURRENT / VERIFIED)
+
+**Login flow (verified live):** `POST /api/auth/login` {email, password} →
+`adminAuthService.login()` normalizes (trim+lowercase email), looks up
+`admin_users` by exact email, runs `bcrypt.compare` ALWAYS (dummy hash for
+unknown emails — timing-safe), requires `is_active = 1`, and issues a
+zero-dependency HMAC-SHA256 session token
+(`base64url(payload).base64url(HMAC-SHA256(payload, AUTH_SECRET))`, payload
+`{ sub, email, name, iat, exp }`, TTL 12h from `SESSION_TTL_HOURS`) set as
+HttpOnly cookie `greenleaf_admin_session` (SameSite=Lax, secure in
+production, path=/). Failures: generic 401 `Invalid email or password.`;
+malformed JSON → safe 400; `ADMIN_TOKEN` Bearer remains as a deprecated
+transition path for scripts (fail-closed 503 when nothing is configured).
+
+**Validation & logout:** `GET /api/auth/me` re-reads the live admin row
+(deactivation/deletion takes effect immediately); `POST /api/auth/logout`
+clears the cookie idempotently (no server-side session store exists).
+
+**Authorization:** single implicit role (authenticated admin). Binary
+fail-closed `adminAuth` gate on every `/api/admin/*` router; public routes
+are read-only with status/is_active data filtering. No 403 paths exist —
+denials are 401 (unauthenticated) or 404/400 (data-level).
+
+**Database identity model (verified):** 13 tables; the ONLY identity table
+is `admin_users` (id PK; email UNIQUE case-insensitive; password_hash
+bcrypt; name; is_active; timestamps; idx(email, is_active)). **NO users,
+roles, permissions, sessions or password-reset tables exist.** No
+`user_id`-style column exists anywhere (the only `parent_id` fields are
+navigation/leadership hierarchy). No entity represents a non-admin person.
+Verified rows: 3 admin accounts (including real personal data — migration
+must be non-destructive).
+
+**Frontend (admin SPA):** `useAdminAuth` (no token in JS — HttpOnly cookie
+only; /me restores session on refresh) + `AuthGate` per route + shared
+`handleUnauthorized` (401/503 → logout) + fetch wrapper with
+`credentials: 'include'`, GET dedupe, 429 Retry-After surfacing. The
+public site has ZERO auth code.
+
+**Security controls (verified):** helmet, CORS allowlist (5173/5174,
+credentials), global limiter 600/15min identity-aware (login exempt),
+login limiter 10/10min, upload limiter 30/15min, bcrypt-12, timing-safe
+compares, parameterized SQL (`multipleStatements:false`), fail-loud
+AUTH_SECRET (≥32 chars), generic prod errors.
+
+### AN.2 Identity gap summary (drives the design)
+
+1. One identity table (`admin_users`) with no role concept — cannot host
+   students/teachers/guardians (schema has no role, and its name/semantics
+   are admin-specific).
+2. No RBAC: every admin is equal; no permission granularity (blocks
+   least-privilege before student data arrives — MASTER_PLAN Phase D gate).
+3. No password reset / recovery (no email delivery either).
+4. Stateless sessions cannot be revoked server-side (mitigated by 12h TTL
+   + /me re-read; acceptable until portals demand revocation lists).
+5. No CSRF tokens (SameSite=Lax + JSON content-type are the mitigations).
+6. Deprecated shims remain (adminAuth re-export, ADMIN_TOKEN Bearer).
+
+### AN.3 Unified identity model (Phase C.2: NOW IMPLEMENTED — CURRENT / VERIFIED)
+
+Definitions:
+- **USER** — one authenticated identity: `users` row (email = login
+  identifier, bcrypt password_hash, name, is_active, password_changed_at).
+  **CURRENT (migration 014; C4 cutover 2026-09-28): the authentication
+  source — login and /me read users (§AN.14).**
+- **ROLE** — a seeded catalog code (`roles`: admin, student, teacher,
+  guardian — seed 006) that carries a permission set via `role_permissions`.
+  **CURRENT (migrations 013/016).**
+- **PROFILE** — a DOMAIN entity linked 1:1 by `user_id` (students Phase F,
+  teachers/employees Phase G, guardians Phase F/H). **PROPOSED / FUTURE.**
+- **ACCOUNT** — the users row + its role assignments; lifecycle via
+  is_active.
+
+`users.password_changed_at` (UTC, NULL = never) powers password-change
+session invalidation (AN.7) **CURRENT since the C4 cutover**:
+`attachSessionUser` compares the token `pwdAt` against the live stamp
+(mismatch → 401) at zero ongoing cost; copied admin rows are stamped at
+the copy time.
+
+**C2 code (CURRENT / VERIFIED — service-level only, NO HTTP surface):**
+models `server/src/models/{Role,User,UserRole,RolePermission}.js`
+(parameterized SQL; password_hash never leaves the model),
+`server/src/services/identityService.js` (createUser with bcrypt-12 +
+primary-role transaction; assignRole with makePrimary swap; read-only
+role catalog; short-TTL permission cache),
+`server/src/validators/identityValidation.js` (email/name/role-code/
+permission-key whitelists, unknown fields rejected).
+Verified by `scripts/test-identity-foundation.mjs` (49 checks: structure,
+uniques, FK CASCADE/RESTRICT rules, catalog seed, service rules incl.
+duplicate/invalid rejection + transaction safety, privacy, admin
+compatibility, CASCADE cleanup).
+
+### AN.4 Role architecture (PROPOSED — supersedes the users.role mention in §L)
+
+**`users` + `roles` (catalog) + `user_roles` (junction) — NOT a single
+role column.** Reasons: (a) teacher-who-is-also-guardian and
+admin-who-is-also-teacher are realistic in a school and the junction
+admits them with zero migration; (b) role_permissions keys off roles, so
+a second role would otherwise duplicate permission rows; (c) the portal
+shell (Phase N) needs a deterministic default — solved with
+`user_roles.is_primary` (exactly one per user, service-enforced).
+Service rules: every user has ≥1 role; exactly one is_primary.
+
+### AN.5 Permission architecture (PROPOSED)
+
+RBAC with a seeded permission-key catalog — no per-user overrides in
+v1. `role_permissions(role_id, permission_key VARCHAR(64))`; the key
+whitelist lives in code (mirrors the existing validator-whitelist
+convention). Middleware evolution: `requireRole(...codes)` (coarse,
+replaces the binary gate; `adminAuth` becomes an alias so no router
+breaks) and `requirePermission('students.write')` (fine, reads
+role_permissions cached per process with short TTL). Coarse defaults:
+`admin` → `*`. Per-user allow/deny overrides: deferred (documented
+extension point).
+
+### AN.6 Ownership / data-scoping rules (PROPOSED — the portal contract)
+
+Enforcement LAYERING (backend only, never frontend hiding):
+| Layer | Responsibility |
+|---|---|
+| middleware `attachSessionUser` | verify signature/expiry → `req.user = { id, roleCodes }` |
+| middleware `requireRole` / `requirePermission` | coarse gate (401/403) |
+| **service** | OWNERSHIP: resolve session identity → profile id(s) via user_id lookup, then scope every model call to it |
+| model | parameterized SQL with the scoped id in WHERE — never a client-supplied id |
+
+Patterns: student → `users.id → students.user_id` → own rows only;
+teacher → `teacher_assignments` (verified per request) → assigned
+class-subjects only; guardian → `student_guardians` verified per request
+→ linked children only; admin → permission-scoped. Denials: generic 403
+or 404 that never confirm the existence of inaccessible records.
+`GET /api/portal/...` endpoints never accept an owner id from the client
+body/URL as authorization input.
+
+> **C3 note (2026-09-27):** the pattern layer above is NOW CODE —
+> `server/src/services/ownershipScoping.js` implements the deterministic
+> primitives (canonical `users.id` parsing/domain, session-identity
+> ownership resolution where a client-supplied id can only CONFIRM the
+> session identity, owned-row double-checks, parameterized owned-by WHERE
+> fragments, active-identity resolution through the C2 safe projection).
+> Denials return `null` (caller maps to generic 404 — 403 stays a C7
+> concern). The helpers NEVER authenticate, never read cookies, never
+> gate permissions, and never project credentials; verified by
+> `scripts/test-ownership-scoping.mjs` (64 checks incl. C3/C4 boundary
+> scans + live-DB round-trips). Middleware/profile tables that CONSUME
+> these helpers remain future work (C4 cutover, C8, Phases F/G/H).
+
+### AN.7 Session strategy (PROPOSED extensions to the WORKING mechanism)
+
+KEEP: stateless HMAC token, HttpOnly+Lax+secure cookie, 12h TTL, /me
+re-read. EXTEND (format-compatible):
+- payload gains `roles: [codes]` (read at login from user_roles) and
+  `pwdAt` (users.password_changed_at at issue time);
+- `attachSessionUser` additionally compares token `pwdAt` vs the live
+  `users.password_changed_at` → mismatch = 401 (password-change
+  invalidation WITHOUT a session store);
+- session FIXATION: cookie value is regenerated on every login (already
+  true); per-request rotation deferred;
+- concurrent sessions: allowed; per-device listing/revocation deferred
+  to Phase P (revocation-list evaluation before portals).
+- logout: cookie clear (client-side) — unchanged; server-side
+  invalidation = password-change rule + future revocation list.
+
+### AN.8 Password reset design (PROPOSED — Phase C5)
+
+`password_resets` (id PK; user_id FK CASCADE; token_hash CHAR(64) =
+SHA-256 of a 32-byte crypto-random token; expires_at (60 min);
+used_at NULL; created_at; idx(token_hash), idx(user_id)). Flow:
+request → create token (store HASH only; email the raw token once) →
+reset consumes: hash-match + unexpired + unused (transactional UPDATE
+with used_at check) → sets password_hash + password_changed_at=NOW →
+invalidates all other reset rows for the user. Generic responses
+(no account enumeration). Rate limit 5/15min per IP + per email on the
+request endpoint. **Email delivery does not exist (§W):** until the
+notification adapter ships, password reset is ADMIN-ISSUED (C6 UI
+generates a one-time set-password link/token shown to the admin) + the
+existing `admin:create` script path; self-service email reset activates
+automatically when the email adapter lands. Login rate limit unchanged.
+
+### AN.9 CSRF analysis (PROPOSED decision — no library now)
+
+Current exposure: cookie-authenticated state-changing endpoints.
+Mitigations already in place: SameSite=Lax (blocks cross-site POST
+cookies in modern browsers), JSON-only bodies (simple-form CSRF cannot
+send application/json), strict CORS allowlist. Decision: ADD cheap
+Origin/Referer validation middleware for `/api/auth/*` and
+`/api/admin/*` state-changing routes at Phase C4 (reject when an Origin
+header is present and not allowlisted); full double-submit CSRF tokens
+re-evaluated in the Phase P review when portal forms arrive. No library
+in Phase C.
+
+### AN.10 Login identifier & lifecycle (PROPOSED)
+
+- Canonical identifier: **email** (lowercase, unique). Existing
+  convention end-to-end; phone stays display-only (contact settings);
+  NO username, NO second identifier.
+- Lifecycle: `is_active` (ACTIVE/INACTIVE) is SUFFICIENT. No PENDING
+  (no self-registration — accounts are issued), no LOCKED (rate
+  limiters cover brute force), no SUSPENDED (policy distinction, not
+  technical). Do not add a status column.
+
+### AN.11 API boundaries & response contract (PROPOSED)
+
+| Group | Boundary | Auth |
+|---|---|---|
+| `/api/health`, public content | unchanged | none |
+| `/api/auth/*` | login/logout/me (+ future change-password, forgot/reset) | mixed: login/forgot public; me/change authenticated |
+| `/api/admin/*` | admin CMS + future `/api/admin/users` | `requireRole('admin')` (adminAuth alias) |
+| `/api/portal/{student\|guardian\|teacher}/*` | ownership-scoped reads/writes (Phase N) | role + ownership scoping (AN.6) |
+
+Response contract: the CANONICAL `{ success, message?, data }` envelope
+everywhere (the news `{items}` deviation exists and is tracked §20.11 —
+never replicated). 401 = no/expired/invalid session; 403 = authenticated
+but not permitted (introduced with requireRole/requirePermission);
+422-style validation stays 400 with safe messages.
+
+### AN.12 Rate limits (PROPOSED future values)
+
+| Endpoint | Limit | Key |
+|---|---|---|
+| POST /api/auth/login | 10/10min (EXISTS) | IP |
+| POST /api/auth/forgot-password | 5/15min | IP + per-email (double bucket) |
+| POST /api/auth/reset-password | 10/15min | IP |
+| change-password, me, logout | global limiter only (600/15min, identity-aware) | user:id / ip |
+
+### AN.13 Database entities (Phase C.2: 013–016 IMPLEMENTED — CURRENT / VERIFIED; 017 future)
+
+| Order | Table | Purpose / key columns | FKs | Privacy | Status |
+|---|---|---|---|---|---|
+| 1 | `roles` (013) | catalog: id, code UNIQUE, name, is_active; seeds: admin/student/teacher/guardian | — | low | **CURRENT (C.2)** |
+| 2 | `users` (014) | id, email UNIQUE (ci), password_hash, name, is_active, password_changed_at, timestamps; idx(email,is_active) | — | HIGH (credentials) | **CURRENT (C.2)** — no auth path reads it yet |
+| 3 | `user_roles` (015) | user_id FK CASCADE, role_id FK RESTRICT, is_primary TINYINT; UNIQUE(user_id,role_id), idx(user_id), idx(role_id) | users, roles | medium | **CURRENT (C.2)** |
+| 4 | `role_permissions` (016) | role_id FK CASCADE, permission_key VARCHAR(64); PK(role_id, permission_key) | roles | low | **CURRENT (C.2)** — no rows; enforcement C7 |
+| 5 | `password_resets` (017, Phase C5) | as AN.8 | users | HIGH | PROPOSED |
+
+Migrations are additive/idempotent per the established runner (proven:
+applied twice — second run 0 applied). Profile
+tables (students/teachers/guardians + assignments + student_guardians)
+remain Phase F/G/H per the existing plan — Phase C creates the SEAMS
+(user_id conventions + AN.6 patterns), not the tables. C2 shipped the
+service-level foundation; **C4 (2026-09-28) made `users` the live
+authentication source** — still NO identity HTTP surface (GET /api/users
+→ 404 re-verified; /api/admin/users arrives with C6). Live DB after the
+copy: users = 3 canonical admins (email/verbatim-hash/active-state
+1:1 with admin_users, stamped password_changed_at), each with exactly
+one primary `admin` role; admin_users = 3 rows byte-identical
+(read-only legacy, kept forever).
+
+### AN.14 Admin compatibility strategy (phased, non-destructive — C4 phase IMPLEMENTED 2026-09-28)
+
+Adopt **users as canonical identity** (Strategy B from the strategy
+comparison: separate-forever would fork password reset/user
+management/audit forever; link-forever would keep dual lookups in every
+auth path) — implemented in phases so nothing breaks:
+1. **C2 (no data movement):** create roles/users/user_roles/
+   role_permissions; admin_users untouched; login still reads admin_users.
+2. **C4 (cutover) — IMPLEMENTED 2026-09-28:** one-time non-destructive
+   copy script (`server/src/scripts/migrateAdminUsersToUsers.js`,
+   `npm run identity:migrate-admins`; `--verify-only` = gate only) — each
+   admin_users row → users (+ user_roles admin, is_primary) WITH its
+   existing bcrypt hash (bcrypt hashes are portable; NO plaintext,
+   NO re-hash, NO password change for admins; created_at preserved;
+   password_changed_at stamped at the copy). Login switches to users;
+   admin_users becomes a read-only legacy table (kept, never dropped).
+   `/api/auth/me` switches to users; `roles` + `pwdAt` claims added to
+   tokens (§AN.7). Session identity flows through the LONG-ESTABLISHED
+   `req.adminUser` consumer shape with CANONICAL values (id = users.id)
+   — no router/CMS changes. Post-cutover `admin:create` creates
+   CANONICAL admins (users + primary admin role via the C2 identity
+   service) so script-created accounts can log in; a same-email legacy
+   row would surface as a copy-gate CONFLICT (audited, never merged).
+3. **Verification gate (mandatory, IMPLEMENTED):** the copy script's gate
+   re-reads BOTH tables fresh and asserts SOURCE/TARGET counts,
+   MISSING/DUPLICATE/CONFLICT/INVALID/EXTRA reporting, verbatim hashes,
+   active-state mapping, stamped password_changed_at, exactly-one primary
+   `admin` role per copied identity, mechanical wrong-password bcrypt
+   rejection (proves hash processability without plaintext), no orphan
+   user_roles, no duplicate canonical email; exits NON-ZERO on any
+   failure — the cutover must not be activated unless it passes.
+   Rollback = previous server code (tables are additive; admin_users
+   never modified).
+4. **Retirement:** deferred until Phase C exit is verified; removal of
+   the deprecated shims (adminAuth path, ADMIN_TOKEN) is a separate
+   tracked cleanup, never bundled.
+
+### AN.15 Frontend auth boundaries (PROPOSED)
+
+Shared (future, when portals exist): fetch wrapper conventions
+(credentials include, error normalization, Retry-After), session
+bootstrap via /me-style endpoint, AuthGate pattern. Separate: admin SPA
+stays the admin CMS (role-gated to admin); portal shells are a Phase N
+decision (shared authenticated area vs per-role SPA — deferred there).
+Phase C frontend work is LIMITED to: admin user-management UI (C6),
+password-change UI (C5), 403 handling in the shared client (C7).
+
+### AN.16 Security threat model (PROPOSED posture)
+
+| Threat | Current protection | Future protection (Phase C) | Layer |
+|---|---|---|---|
+| Brute force | login limiter 10/10min, generic errors | unchanged + account activity review | middleware |
+| Credential stuffing | bcrypt-12, generic errors | unchanged | service |
+| Session theft | HttpOnly+secure(prod), 12h TTL | pwdAt invalidation; revocation list (P) | middleware |
+| Session fixation | new cookie per login | unchanged | controller |
+| CSRF | SameSite=Lax, JSON bodies, CORS | Origin/Referer validation on auth+admin writes (C4) | middleware |
+| XSS | React escaping, HttpOnly cookie | unchanged (no token in JS) | frontend |
+| Account enumeration | generic login errors | generic forgot/reset responses | service |
+| Reset abuse | n/a yet | hashed one-time 60min tokens, rate limits, admin-issued until email exists | service+middleware |
+| Privilege escalation | single role (no surface) | roles+permissions; requireRole/Permission; `*` for admin only | middleware+service |
+| IDOR/BOLA | no portal data exists | ownership scoping (AN.6): session-resolved ids only — **primitives shipped in C3** (`services/ownershipScoping.js`) | service+model |
+| Guardian→wrong child / teacher→unassigned class | n/a | per-request link/assignment verification, generic 403/404 | service |
+| Admin abuse | no audit trail | audit_logs (Phase D, tracked) | Phase D |
+
+### AN.17 Phase C roadmap (dependency-aware — refined from the 10-item plan)
+
+| Item | Objective | Depends on | DB | API | Frontend | Security | Acceptance | Status |
+|---|---|---|---|---|---|---|---|---|
+| C1 | Audit + design | — | none | none | none | model documented | docs updated, no code | **DONE (2026-09-27)** |
+| C2 | Identity tables + models/services (no auth change) | C1 | 013–016 | none new | none | additive only | migrate/verify green; admin login UNCHANGED | **DONE (2026-09-27)** — 49/49 identity checks + all regressions + builds green |
+| C3 | Linking seams: user_id conventions + scoping helpers (design→code) | C2 | none | helpers only | none | patterns unit-tested | helpers used by later phases | **DONE (2026-09-27)** — `services/ownershipScoping.js` (USER_LINK_COLUMN='user_id', parseUserId/requireUserId canonical-id domain, resolveOwnerScope, assertOwnedRow, ownedBy fragment, requireExistingUser/listUserRoleCodes on the C2 safe projection); no DB/API/auth change; verified by `scripts/test-ownership-scoping.mjs` (64 checks) |
+| C4 | Auth cutover: copy script, users-canonical login, roles claim, pwdAt, Origin check | C2 | copy (non-destructive) | login/me switch source | none (transparent) | session invalidation + CSRF baseline | admins log in with SAME credentials; all admin flows regression-green | **DONE (2026-09-28)** — `identity:migrate-admins` copy + 1:1 gate (3/3, verbatim hashes, one primary admin role each); login/me read users (sub = users.id, `roles`+`pwdAt` claims, fail-closed unknown id/pwdAt-mismatch/legacy-token rejection); Origin/Referer guard on /api/auth + /api/admin writes; `admin:create` canonical; `scripts/test-c4-cutover.mjs` 55/55 live + regressions + builds |
+| C5 | Password change + reset (admin-issued until email exists) | C4 | 017 | auth endpoints | change-password UI | AN.8 fully | reset round-trip verified; generic responses | — |
+| C6 | Admin user management UI (list/create/deactivate/role-assign/reset-issue) | C4 (+C5) | none | /api/admin/users | admin page | admin-only | two admins with different roles demonstrably differ (D exit early) | — |
+| C7 | requireRole/requirePermission enforcement | C2 | none | middleware on admin routers | 403 handling | least-privilege | all existing admin routes still pass as admin | — |
+| C8 | Ownership-scoped API foundation (helpers + tests; NO portal endpoints) | C3, C7 | none | none public | none | AN.6 verified by tests | scoping unit tests green | — |
+| C9 | Security + auth test suite (script per repo convention) | C4–C8 | none | n/a | n/a | regression | login/session/reset/403/IDOR suite green | — |
+| C10 | Documentation + roadmap update | all | none | none | none | — | both docs consistent | — |
+
+### AN.18 Change safety (what Phase C must NOT touch)
+
+Public website, all public APIs, SEO (B.7), News/Gallery/Downloads/
+Contact/Leadership/Settings/Homepage modules, uploads pipeline, existing
+admin session COOKIE NAME + login UX (admins keep credentials), and the
+news response envelope (§20.11 stays as-is). admin_users is never
+dropped or destructively altered. Migrations stay additive/idempotent.
 
 ---
 

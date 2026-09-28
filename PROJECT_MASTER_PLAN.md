@@ -23,7 +23,29 @@
 > Audit: 2026-09-26. Post-audit validation (re-verified against source, docs
 > corrected): 2026-09-26. No feature was assumed from UI alone. Phase B.6
 > (Downloads Center) implemented + re-verified 2026-09-27 against source and
-> live API.
+> live API. Phase B.7 (SEO completion) implemented + verified 2026-09-27
+> (`scripts/test-seo-api.mjs`, 70 checks + full regressions + both builds).
+> Phase C Item 1 (auth + identity AUDIT + DESIGN) completed 2026-09-27 —
+> verified against source + live server/DB; design recorded in
+> SYSTEM_DESIGN §AN. Phase C Item 2 (identity FOUNDATION) implemented +
+> verified 2026-09-27 (migrations 013–016 idempotent + service layer;
+> `scripts/test-identity-foundation.mjs`, 49 checks + regressions + builds;
+> existing admin auth untouched). Phase C Item 3 (ownership-scoping
+> helpers + user_id linking seams) implemented + verified 2026-09-27
+> (`server/src/services/ownershipScoping.js` +
+> `scripts/test-ownership-scoping.mjs`, 64 checks + regressions + builds;
+> no DB/API/auth change). Phase C Item 4 (AUTHENTICATION CUTOVER)
+> implemented + verified 2026-09-28 — the non-destructive
+> admin_users → users copy passed the mandatory 1:1 gate (3/3, hashes
+> verbatim, one primary admin role each), login/me now read the
+> canonical `users` table (sub = users.id, `roles` + `pwdAt` claims,
+> pwdAt-mismatch invalidation), the Origin/Referer CSRF baseline is
+> mounted on /api/auth + /api/admin state-changing routes, and
+> `admin:create` creates CANONICAL admins; verified live
+> (`scripts/test-c4-cutover.mjs`, 55/55 incl. login, session claims,
+> tampered/legacy-token rejection, CSRF matrix, CMS round-trip,
+> admin_users byte-identical, rollback-gate) + all regression suites +
+> both builds; admin_users is preserved read-only (never dropped).
 
 ---
 
@@ -481,8 +503,34 @@ To build (only after audit-confirmed need; no duplicates):
 
 ### To build (PROPOSED / FUTURE — extend, never replace)
 - [ ] Unified identity model with roles (design in SYSTEM_DESIGN RBAC strategy)
+  - **Phase C.2 progress:** the identity TABLES + SERVICE LAYER exist
+    (migrations 013–016: `roles`/`users`/`user_roles`/`role_permissions` +
+    seed 006 catalog + `identityService`/models/validator — see SYSTEM_DESIGN
+    §AN.3).
+  - **Phase C.4 progress (cutover DONE):** login/me now CONSUME the unified
+    identity — the authentication source is `users` (sub = canonical
+    users.id; `roles` + `pwdAt` session claims; Origin/Referer CSRF
+    baseline on /api/auth + /api/admin state-changing routes). This box
+    stays unchecked until the full Phase C chain (C5 password flows,
+    C6 admin user UI, C7 enforcement) lands.
+  - **Phase C.3 progress:** the ownership-scoping HELPER layer exists
+    (`services/ownershipScoping.js` — §AN.6 primitives over the canonical
+    `users.id` convention; no auth/API surface — see the C.3 progress note
+    under “Ownership-scoped authorization middleware” above). Consumers
+    (role gates, profile tables) remain future work (C7 gates / Phase N
+    portals) — the session middleware now feeds canonical identity into
+    the established `req.adminUser` shape (C4).
 - [ ] Portal login endpoints (role-aware)
 - [ ] Ownership-scoped authorization middleware (student→self, guardian→linked children, teacher→assigned classes)
+  - **Phase C.3 progress:** the scoping HELPER LAYER exists
+    (`server/src/services/ownershipScoping.js` — canonical `users.id`
+    conventions + §AN.6 primitives: `resolveOwnerScope`,
+    `assertOwnedRow`, `ownedBy` parameterized fragments, active-identity
+    resolution; denials are fail-closed `null` → generic 404; no auth/
+    API/DB surface — verified by `scripts/test-ownership-scoping.mjs`,
+    64 checks). The middleware that CONSUMES these helpers is still
+    future work (C4 cutover / C7 gates / Phase N portals) — this box
+    stays unchecked until middleware enforces ownership.
 - [ ] Role-specific notice targeting
 - [ ] Audit logging of privileged actions
 - [ ] Password reset flows (all roles)
@@ -491,6 +539,10 @@ To build (only after audit-confirmed need; no duplicates):
 
 Existing tables (CURRENT / VERIFIED — see SYSTEM_DESIGN for full detail):
 - [x] admin_users
+- [x] roles (**Phase C.2** — migration 013 + seed 006: admin/student/teacher/guardian catalog)
+- [x] users (**Phase C.2** migration 014: canonical identity; **Phase C.4**: NOW the authentication source — login/me read it, sub = users.id; legacy admin_users preserved read-only)
+- [x] user_roles (**Phase C.2** — migration 015: multi-role junction, one service-enforced primary)
+- [x] role_permissions (**Phase C.2** — migration 016: permission-key map; empty by design until C7)
 - [x] navigation_items
 - [x] leadership_sections, leadership_messages (FK: messages.section_id → sections.id, RESTRICT)
 - [x] site_settings
@@ -499,7 +551,6 @@ Existing tables (CURRENT / VERIFIED — see SYSTEM_DESIGN for full detail):
 - [x] news_items
 
 Proposed / future (PROPOSED — NOT present; do not treat as existing):
-- [ ] users (unified identity) / roles / permissions / role_permissions
 - [ ] students, guardians, student_guardians
 - [ ] teachers, employees, teacher_assignments
 - [ ] classes, sections, subjects, class_subjects
@@ -587,11 +638,11 @@ To build (PROPOSED / FUTURE):
 - [x] Central SEO config (title/description) + DB-backed overrides via settings
 - [x] Head sync component (title, favicon, OG tags on settings ready)
 - [x] OG image config
-- [ ] Per-page titles/descriptions
-- [ ] Canonical URLs
-- [ ] sitemap.xml / robots.txt
-- [ ] Structured data (Organization, School, NewsArticle JSON-LD)
-- [ ] SSR/prerendering consideration (SPA today — crawlers get empty root for detail pages)
+- [x] Per-page titles/descriptions (**Phase B.7** — one `usePageSeo` hook + `applyPageSeo`; all 11 indexable routes wired)
+- [x] Canonical URLs (**Phase B.7** — origin-resolved via `SITE_URL` → `CLIENT_URL` → config; no origin → tags omitted, no fake URLs)
+- [x] sitemap.xml / robots.txt (**Phase B.7** — server-generated on the API origin (`/robots.txt`, `/sitemap.xml`), published news slugs from the DB; Vite dev proxy included)
+- [x] Structured data (Organization, WebSite, NewsArticle JSON-LD — **Phase B.7**, verified-data-only builders; Event + BreadcrumbList deliberately omitted, see SYSTEM_DESIGN §AG)
+- [ ] SSR/prerendering consideration (SPA today — crawlers that execute JS get full per-page metadata; static-HTML-only crawlers get the index.html fallback for detail pages; see §AG limitation note)
 
 ## 17. Performance Requirements
 
@@ -758,10 +809,59 @@ Key ordering facts derived from the actual architecture:
 4. ~~News page type filtering (consume existing `?type=`) + Events upcoming view~~ — **DONE (B item 4)**: News page type chips (All/News/Events/Notices/Announcements) over the single central list; Upcoming Events view (published EVENT items with future dates, chronological) from the SAME data — event date = the content's `Event Date:` line (admin date picker), public `?type=` now validated + `?upcoming=true` projection added; verified end-to-end (`scripts/test-news-api.mjs`, 50 checks) + all regression suites + both SPA builds green. No new tables/APIs/entities.
 5. ~~Teachers & Staff public directory (static-first if verified data isn't ready)~~ — **DONE (B item 5)**: audit confirmed NO teacher/staff/employee data exists anywhere (12 DB tables + full repo search — Case C) → static-first per plan: public `/teachers` page + `shared/content/teachersStaffContent.js` with EMPTY verified-data groups (no fabricated people); leadership messages REUSED (one source of truth); footer quick-link added; NO new tables/APIs/admin pages/migrations; person shape `{id, name, designation, department?, subject?, profile?, image?}` documented as the 1:1 seam for the future Phase G `/api/teachers`. Verified staff content remains PENDING (school must supply it).
 6. ~~Downloads center (`downloads` entity + file serving reusing the upload pipeline)~~ — **DONE (B item 6)**: migration 012 `downloads` (title/description/category/file/original_filename/file_ext/file_bytes/status/sort_order); document uploads through the shared admin upload surface (POST /api/admin/uploads/document — PDF-only allowlist + %PDF- magic bytes, server-generated filenames, same 10 MB cap + dedicated limiter); public `/api/downloads` (+ `/categories`) with safe projection; secure DB-mediated serving `GET /api/downloads/:id/file` (PUBLISHED only, attachment + nosniff, no filename-based route); admin Downloads page + public `/downloads` Center with category chips + footer link; verified end-to-end (`scripts/test-downloads-api.mjs`, 80 checks incl. the 18-point security checklist) + all regression suites + both SPA builds green. Re-verified 2026-09-27 (80/80 + regressions + builds).
-7. SEO completion (per-page meta, sitemap, robots, JSON-LD). ← **NEXT**
+7. ~~SEO completion (per-page meta, sitemap, robots, JSON-LD)~~ — **DONE (Phase B.7)**: ONE per-page mechanism (`client/src/hooks/usePageSeo.jsx` → `applyPageSeo` in `utils/branding.js`; title/description/canonical/OG/Twitter/JSON-LD per page, global `SettingsHeadSync` guard prevents stomping); canonical URLs from origin resolution (`SITE_URL` → `CLIENT_URL` → config, never hardcoded localhost; no origin → canonical/og:url omitted); server-generated `/robots.txt` + `/sitemap.xml` (`server/src/routes/seoRoutes.js` + `utils/sitemapXml.js`, mounted at `/` — static route inventory from `shared/config/seoConfig.js` + PUBLISHED news slugs from the DB, published-only enforced in SQL, no-origin → empty urlset, no duplicate/query/admin/API URLs); JSON-LD builders in `shared/utils/seoJsonLd.js` (EducationalOrganization + WebSite on every page, NewsArticle on detail pages — verified-data-only: placeholders omitted, no invented geo/hours/ratings/socials, `<`-escaped payloads); News detail SEO uses the published item's own title/excerpt/image/dates — DRAFT/ARCHIVED/unknown slugs render neutral metadata (detail endpoint is published-only); Event + BreadcrumbList schema deliberately omitted (no verified venue data / no breadcrumb UI — documented decision); OG `og:type`/`og:image` page-guard added so the global settings sync never flips a News detail back to `website`/logo. Verified end-to-end (`scripts/test-seo-api.mjs`, 70 checks incl. draft/archived/nonexistent sitemap-leak tests) + all regression suites (Downloads 80, News 50, Page Sections 57, Gallery 54, Contact 48, Image Upload 26) + both SPA builds green. SPA limitation documented honestly in SYSTEM_DESIGN §AG (no SSR/prerendering introduced).
 - Depends on: Phase A. Exit: every public page is CMS-managed; contact submissions persist.
 
 **PHASE C — Authentication + user foundation**
+1. ~~Identity foundation tables + service layer (NO auth change)~~ — **DONE (C.2)**: migrations 013–016 (`roles`, `users`, `user_roles`, `role_permissions`) + seed 006 (4-role catalog) + `server/src/models/{Role,User,UserRole,RolePermission}.js` + `server/src/services/identityService.js` + `server/src/validators/identityValidation.js`; service-level ONLY (no HTTP surface; GET /api/users → 404 verified); migrations proven idempotent (applied twice); existing admin login/sessions/adminAuth/CMS verified untouched; verified end-to-end (`scripts/test-identity-foundation.mjs`, 49 checks: structure/uniques/FKs/catalog/service rules/privacy/admin compatibility) + all regression suites (Contact 48, Downloads 80, News 50, Page Sections 57, Gallery 54, Image Upload 26, SEO 70) + both SPA builds green.
+2. ~~Linking seams: user_id conventions + scoping helpers (NO auth/DB/API change)~~ — **DONE (C.3)**: `server/src/services/ownershipScoping.js` implements the §AN.6 ownership contract as deterministic primitives — canonical `users.id` convention (`USER_LINK_COLUMN='user_id'`, parseUserId with UNSIGNED-INT domain validation, requireUserId), `resolveOwnerScope` (a client-supplied requested id can only CONFIRM the session identity, never widen it), `assertOwnedRow` (a row must PROVE ownership; rows without ownership information are never treated as owned), `ownedBy` (parameterized `user_id = ?` WHERE fragments with identifier whitelisting), `requireExistingUser`/`listUserRoleCodes` (fail-closed resolution through the C2 safe projection). Helpers NEVER authenticate, never read cookies, never gate permissions, never project credentials; denials are `null` → caller maps to generic 404 (403 stays C7). NO migration, NO endpoint, NO auth change. Verified (`scripts/test-ownership-scoping.mjs`, 64 checks: unit patterns + C3/C4 boundary scans + live-DB round-trips through the C2 tables + auth/CMS regressions).
+> **STATUS (Phase C Item 2 — identity foundation, 2026-09-27):** C2 is
+> **DONE** — migrations 013–016 + seed 006 applied and proven idempotent;
+> `identityService` + Role/User/UserRole/RolePermission models +
+> identity validator implemented (service-level ONLY — no HTTP surface);
+> existing admin authentication/sessions/CMS untouched and verified
+> (`scripts/test-identity-foundation.mjs`, 49 checks + all regression
+> suites + both builds green). The C4 cutover (login switches to `users`
+> via a non-destructive admin copy) is the NEXT auth-affecting step.
+> **Item 1 design decisions stand:** `users`+`roles`+`user_roles` (NOT a
+> single role column), email as the canonical identifier, is_active-only
+> lifecycle, phased non-destructive admin compatibility (§AN.14), password
+> reset admin-issued until an email adapter exists.
+> **STATUS (Phase C Item 3 — ownership/linking seams, 2026-09-27):** C3 is
+> **DONE** — `server/src/services/ownershipScoping.js` implements the
+> §AN.6 scoping primitives on the canonical `users.id` convention
+> (helpers only: NO DB migration, NO endpoint, NO auth/session change);
+> verified (`scripts/test-ownership-scoping.mjs`, 64 checks + regressions
+> + builds). The C4 cutover remains the NEXT auth-affecting step; the
+> middleware that consumes these helpers arrives with C4/C7 and the
+> profile tables with Phases F/G/H.
+4. ~~Auth cutover: copy script, users-canonical login, roles claim, pwdAt,
+   Origin check~~ — **DONE (C.4)**: `npm run identity:migrate-admins`
+   (`server/src/scripts/migrateAdminUsersToUsers.js`) copies every
+   admin_users row → users (+ exactly-one primary `admin` role) with the
+   bcrypt hash VERBATIM (no re-hash, no plaintext) and stamps
+   `password_changed_at` at the copy; the mandatory 1:1 gate (SOURCE/TARGET
+   COUNT, MISSING/DUPLICATE/CONFLICT/INVALID, mechanical wrong-password
+   bcrypt rejection, orphan + role checks) must pass BEFORE cutover and
+   exits non-zero otherwise (rollback = previous server code; admin_users
+   is never modified). Login/me read the CANONICAL users table
+   (`adminAuthService` — sub = users.id; role codes resolved from
+   user_roles; generic 401 for unknown email / wrong password / inactive /
+   non-admin identity — no enumeration); session tokens gain `roles` +
+   `pwdAt` claims and `attachSessionUser` fails closed on
+   unknown/malformed ids, pwdAt mismatch (password-change invalidation)
+   and legacy claim-less tokens; the Origin/Referer CSRF baseline
+   (`middleware/originGuard.js`, §AN.9 exact rule: safe methods pass,
+   present-but-unallowlisted Origin/Referer → 403, neither header → allow
+   for script consumers) is mounted ONCE for /api/auth + /api/admin
+   state-changing requests; `admin:create` now creates CANONICAL admins
+   (users + primary admin role) and `adminCount()` reports the canonical
+   count; deprecated ADMIN_TOKEN Bearer path kept untouched (§AN.14.4).
+   Verified live: `scripts/test-c4-cutover.mjs` 55/55 (copy/idempotency,
+   login/no-enumeration, canonical-sub/claims/tamper/legacy rejection,
+   pwdAt invalidation round-trip, CSRF matrix, adminAuth + CMS CRUD,
+   admin_users byte-identical, gate-failure rollback safety) + all
+   regression suites + both builds.
 1. Unified identity design (see SYSTEM_DESIGN RBAC strategy): `users` table with role + role-profile tables, admin_users migration path.
 2. Password reset with expiring tokens (admin first).
 3. Admin user management UI (list/create/deactivate).
@@ -874,7 +974,10 @@ authorization (where applicable) + a tested working flow all exist.
 - [x] Teachers/Staff directory (**Phase B.5** — static-first public `/teachers`; DB-backed directory + admin CMS deferred to the Teachers/Employees CRUD phase)
 - [ ] Events module (upcoming view)
 - [x] About/Academics content CMS parity (**Phase B.3** — +Campus; generic page-content editor)
-- [ ] SEO completion (per-page, sitemap, JSON-LD)
+- [x] SEO completion (**Phase B.7** — per-page metadata + canonicals, `/robots.txt` + `/sitemap.xml`, Organization/WebSite/NewsArticle JSON-LD, dynamic News detail SEO with draft/archived leak prevention)
+- [x] Identity foundation (**Phase C.2** — `roles`/`users`/`user_roles`/`role_permissions` + seed 006 + models/identityService/validator; service-level only, no auth path consumes it yet — that is the C4 cutover)
+- [x] Ownership-scoping helper layer (**Phase C.3** — `services/ownershipScoping.js`: canonical `users.id` conventions + §AN.6 scoping primitives; helpers-only, no auth/API/DB surface; middleware consumers arrive with C4/C7)
+- [x] Authentication cutover (**Phase C.4** — users is the canonical authentication source; 1:1 verified non-destructive admin_users → users copy with the mandatory gate; session claims `roles` + `pwdAt` with password-change invalidation; Origin/Referer CSRF baseline; `admin:create` canonical; verified live 55/55 + regressions + builds)
 - [ ] User foundation (identity + password reset + admin user UI)
 - [ ] Roles & permissions
 - [ ] Classes/Sections/Subjects
@@ -901,6 +1004,17 @@ authorization (where applicable) + a tested working flow all exist.
 - [ ] Bangla language support
 
 ## 25. Development Rule
+
+> **Phase C status (2026-09-28):** Items 1 (audit + design, SYSTEM_DESIGN
+> §AN), 2 (identity foundation: migrations 013–016 + seed 006 + models /
+> identityService / validator — service-level), 3 (ownership-scoping
+> helper layer) and 4 (AUTHENTICATION CUTOVER: canonical users login,
+> 1:1-verified copy + gate, session claims + pwdAt invalidation, CSRF
+> baseline, canonical admin:create) are DONE and verified — C4 live
+> (`scripts/test-c4-cutover.mjs`, 55/55) + all regression suites + both
+> builds. Remaining Phase C items (C5 password change/reset, C6 admin
+> user UI, C7 requireRole/requirePermission enforcement) remain
+> unchecked below.
 
 From this point forward: **PROJECT_MASTER_PLAN.md = MASTER ROADMAP**;
 **SYSTEM_DESIGN.md = MASTER TECHNICAL DESIGN**. Every future coding task must:

@@ -75,8 +75,13 @@ export function applyBranding({ settings, titleOverride } = {}) {
   }
   favicon.setAttribute('href', branding.favicon);
 
-  setMeta('meta[property="og:image"]', 'content', branding.ogImage);
-  setMeta('meta[property="og:type"]', 'content', 'website');
+  // Phase B.7 fix: og:type and og:image are page-OWNED tags too. A
+  // News detail page sets og:type=article and its own og:image — the
+  // global settings sync must not flip them back to website/logo.
+  if (!isPageSeoActive()) {
+    setMeta('meta[property="og:image"]', 'content', branding.ogImage);
+    setMeta('meta[property="og:type"]', 'content', 'website');
+  }
 }
 
 // ------------------------------------------------------------
