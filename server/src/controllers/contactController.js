@@ -20,6 +20,7 @@ import {
   setContactMessageStatus,
   deleteContactMessage,
 } from '../services/contactService.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 /** Map service errors to responses; log everything else safely. */
@@ -107,6 +108,14 @@ export async function patchContactMessageStatus(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid contact message id' });
     }
     const data = await setContactMessageStatus(id, req.body);
+    // D3 (§AN.19): status transition only — the message content is
+    // private data and never enters the audit trail.
+    await recordAdminMutation(req, {
+      action: 'CONTACT_MESSAGE_STATUS_SET',
+      entity: 'contact_message',
+      entityId: id,
+      meta: { to: req.body?.status ?? null },
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -124,6 +133,11 @@ export async function deleteContactMessageController(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid contact message id' });
     }
     const data = await deleteContactMessage(id);
+    await recordAdminMutation(req, {
+      action: 'CONTACT_MESSAGE_DELETE',
+      entity: 'contact_message',
+      entityId: id,
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {

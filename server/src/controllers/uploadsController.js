@@ -12,6 +12,7 @@
 import { saveImage } from '../utils/imageUpload.js';
 import { saveDocument } from '../utils/documentUpload.js';
 import { UPLOAD_ERROR_CODES } from '../utils/imageSanitizer.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 
 /** Client-safe messages per validation error code. */
 const SAFE_MESSAGES = Object.freeze({
@@ -38,6 +39,15 @@ export async function uploadAdminImage(req, res) {
     }
 
     const stored = await saveImage(file.data);
+
+    // D3 (§AN.19): server-generated filename + safe dimensions —
+    // NEVER the file contents or the original filename.
+    await recordAdminMutation(req, {
+      action: 'UPLOAD_IMAGE',
+      entity: 'upload',
+      entityId: stored.publicUrl,
+      meta: { bytes: stored.bytes, width: stored.width, height: stored.height },
+    });
 
     return res.status(201).json({
       success: true,
@@ -89,6 +99,15 @@ export async function uploadAdminDocument(req, res) {
     }
 
     const stored = await saveDocument(file);
+
+    // D3: extension + size are safe; original_filename is the
+    // CLIENT-SUPPLIED name — deliberately excluded from meta.
+    await recordAdminMutation(req, {
+      action: 'UPLOAD_DOCUMENT',
+      entity: 'upload',
+      entityId: stored.publicUrl,
+      meta: { bytes: stored.bytes, file_ext: stored.file_ext },
+    });
 
     return res.status(201).json({
       success: true,

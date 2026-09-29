@@ -23,6 +23,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   listPublicGallery,
   listPublicGalleryCategories,
@@ -42,7 +43,7 @@ router.get('/categories', listPublicGalleryCategories);
 
 // ---- Admin CRUD (all behind adminAuth) ----
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 
 adminRouter.get('/', listAdminGallery);
 adminRouter.post('/', createGallery);

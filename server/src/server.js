@@ -124,14 +124,16 @@ app.use('/api/admin/leadership-messages', adminLeadershipRouter);
 import { getPublicLeadership } from './controllers/leadershipController.js';
 app.get('/api/leadership', getPublicLeadership);
 
-// Admin section settings (same adminAuth gate as the messages router).
+// Admin section settings (adminAuth + C7 content.write gate —
+// same authorization level as the messages router it mirrors).
 import adminAuth from './middleware/sessionAuth.js';
+import { requirePermission } from './middleware/rbac.js';
 import {
   getLeadershipSectionSettings,
   updateLeadershipSectionSettings,
 } from './controllers/leadershipController.js';
 const leadershipSectionAdmin = express.Router();
-leadershipSectionAdmin.use(adminAuth);
+leadershipSectionAdmin.use(adminAuth, requirePermission('content.write'));
 leadershipSectionAdmin.get('/', getLeadershipSectionSettings);
 leadershipSectionAdmin.put('/', updateLeadershipSectionSettings);
 app.use('/api/admin/leadership-section', leadershipSectionAdmin);
@@ -192,6 +194,14 @@ app.use('/api/admin/downloads', adminDownloadRouter);
 // auth, no user input; mounted BEFORE the API 404 handler.
 import seoRoutes from './routes/seoRoutes.js';
 app.use('/', seoRoutes);
+
+// Admin user management (Phase C.6): adminAuth-gated canonical
+// identity administration — list / create / activate-deactivate /
+// role assignment / ADMIN-ISSUED reset tokens. The per-operation
+// admin-role check lives in adminUserService; requireRole/
+// requirePermission RBAC stays C7.
+import adminUserRoutes from './routes/adminUserRoutes.js';
+app.use('/api/admin/users', adminUserRoutes);
 
 // --------------- 404 Handler ---------------
 

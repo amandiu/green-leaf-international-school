@@ -21,6 +21,7 @@ import {
   updatePageSection,
   PAGE_SECTION_KEYS,
 } from '../services/pageSectionService.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 /** True only for page identifiers with a validated section schema. */
@@ -80,6 +81,12 @@ export async function putPageSection(req, res) {
       return res.status(404).json({ success: false, message: `Unknown ${page} section "${key}"` });
     }
     const data = await updatePageSection(page, key, req.body);
+    // D3 (§AN.19): composite target uses the "page:key" string form.
+    await recordAdminMutation(req, {
+      action: 'PAGE_SECTION_UPDATE',
+      entity: 'page_section',
+      entityId: `${page}:${key}`,
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err instanceof HttpError) {

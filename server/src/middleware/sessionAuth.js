@@ -82,7 +82,10 @@ export async function attachSessionUser(req, _res, next) {
  */
 export function adminAuth(req, res, next) {
   // 1. Cookie session (browser Admin Panel)
-  if (req.adminUser) return next();
+  if (req.adminUser) {
+    req.adminAuthMethod = 'session';
+    return next();
+  }
 
   // 2. Transition: server-side secret via Bearer (scripts/tests)
   const header = req.headers.authorization || '';
@@ -97,6 +100,12 @@ export function adminAuth(req, res, next) {
     const a = Buffer.from(token);
     const b = Buffer.from(process.env.ADMIN_TOKEN);
     if (a.length === b.length && a.equals(b)) {
+      // Phase C.7: tag the method so the permission gates can keep
+      // this deprecated script path working (§AN.14.4 — untouched
+      // until its own tracked cleanup). No identity attaches to a
+      // Bearer call; the gates treat it as an authorized server
+      // consumer, NOT as any canonical identity.
+      req.adminAuthMethod = 'bearer';
       return next();
     }
     // A Bearer credential was presented but is wrong → generic 401.

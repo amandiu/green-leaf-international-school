@@ -14,6 +14,8 @@ import ContactInbox from './pages/ContactInbox';
 import GalleryManagement from './pages/GalleryManagement';
 import PageContentManagement from './pages/PageContentManagement';
 import DownloadsManagement from './pages/DownloadsManagement';
+import ChangePassword from './pages/ChangePassword';
+import UserManagement from './pages/UserManagement';
 
 // Placeholder page — will be built in Phase 6
 const Dashboard = ({ onLogout }) => (
@@ -132,6 +134,24 @@ const Dashboard = ({ onLogout }) => (
           <span className="block font-semibold text-charcoal-900">Campus Page</span>
           <span className="mt-1 block text-sm text-charcoal-500">
             Edit the Campus overview and facilities (photos stay in the Gallery module)
+          </span>
+        </Link>
+        <Link
+          to="/users"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">User Management</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Canonical accounts — create, deactivate, assign roles, issue reset tokens (Phase C.6)
+          </span>
+        </Link>
+        <Link
+          to="/change-password"
+          className="rounded-xl border border-charcoal-200 bg-white p-5 shadow-sm transition-colors hover:border-forest-300 hover:bg-green-50/50"
+        >
+          <span className="block font-semibold text-charcoal-900">Change Password</span>
+          <span className="mt-1 block text-sm text-charcoal-500">
+            Update your own password — signs you out everywhere (Phase C.5)
           </span>
         </Link>
       </nav>
@@ -273,6 +293,22 @@ function App() {
         element={
           <AuthGate initializing={initializing} user={user}>
             <PageContentManagement page="campus" onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <UserManagement onUnauthorized={handleUnauthorized} />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/change-password"
+        element={
+          <AuthGate initializing={initializing} user={user}>
+            <ChangePassword onUnauthorized={handleUnauthorized} />
           </AuthGate>
         }
       />

@@ -52,6 +52,21 @@ export async function findByEmailWithHash(email) {
   return rows[0] || null;
 }
 
+/**
+ * Credential fetch by canonical id (includes password_hash) —
+ * C5 change-password use only: the authenticated flow must verify
+ * the CURRENT password against the live canonical hash. Same
+ * projection discipline as findByEmailWithHash: the hash never
+ * leaves the service layer.
+ */
+export async function findByIdWithHash(id) {
+  const [rows] = await pool.query(
+    `SELECT ${COLUMNS} FROM \`users\` WHERE \`id\` = ? LIMIT 1`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
 /** Safe profile by id (no password_hash). */
 export async function findSafeById(id) {
   const [rows] = await pool.query(
@@ -83,6 +98,46 @@ export async function emailExists(email) {
 export async function countUsers() {
   const [rows] = await pool.query('SELECT COUNT(*) AS n FROM `users`');
   return rows[0].n;
+}
+
+/**
+ * All users with their resolved role codes, primary role FIRST.
+ * Phase C.6 admin user-management list. SAFE projection only:
+ * password_hash and password_changed_at are never selected (the
+ * SAFE_COLUMNS discipline). Two queries — users + the role join —
+ * merged here to avoid an N+1 per-user lookup.
+ */
+export async function listSafeUsersWithRoles() {
+  const [users] = await pool.query(
+    `SELECT ${SAFE_COLUMNS} FROM \`users\` ORDER BY \`id\` ASC`,
+  );
+  const [roleRows] = await pool.query(
+    'SELECT `ur`.`user_id`, `r`.`code`, `ur`.`is_primary`'
+      + ' FROM `user_roles` `ur` JOIN `roles` `r` ON `r`.`id` = `ur`.`role_id`'
+      + ' ORDER BY `ur`.`user_id` ASC, `ur`.`is_primary` DESC, `ur`.`id` ASC',
+  );
+  const rolesByUser = new Map();
+  for (const row of roleRows) {
+    if (!rolesByUser.has(row.user_id)) rolesByUser.set(row.user_id, []);
+    rolesByUser.get(row.user_id).push(row.code);
+  }
+  return users.map((u) => ({
+    ...toJs(u),
+    roles: rolesByUser.get(u.id) || [],
+  }));
+}
+
+/**
+ * Set the is_active lifecycle flag (Phase C.6 admin deactivation).
+ * Returns affected rows (0 = unknown id). Deliberately the ONLY
+ * lifecycle state — no suspended/locked/pending (§AN.10).
+ */
+export async function setActive(id, isActive) {
+  const [result] = await pool.query(
+    'UPDATE `users` SET `is_active` = ? WHERE `id` = ?',
+    [isActive ? 1 : 0, id],
+  );
+  return result.affectedRows;
 }
 
 /**
@@ -127,6 +182,22 @@ export async function markPasswordChanged(id, { password_hash = null } = {}) {
  */
 export async function updatePasswordHash(id, password_hash) {
   const [result] = await pool.query(
+    'UPDATE `users` SET `password_hash` = ?, `password_changed_at` = UTC_TIMESTAMP(3) WHERE `id` = ?',
+    [password_hash, id],
+  );
+  return result.affectedRows;
+}
+
+/**
+ * Transaction-scoped form of the SAME atomic seam (C5 reset
+ * consumption): identical single-statement hash + stamp update,
+ * executed on the CALLER's connection so it commits/rolls back
+ * together with the token consumption around it (§AN.8). Not a
+ * second password-update mechanism — the pool form above stays
+ * the non-transactional entry point (change-password flow).
+ */
+export async function updatePasswordHashWith(conn, id, password_hash) {
+  const [result] = await conn.query(
     'UPDATE `users` SET `password_hash` = ?, `password_changed_at` = UTC_TIMESTAMP(3) WHERE `id` = ?',
     [password_hash, id],
   );

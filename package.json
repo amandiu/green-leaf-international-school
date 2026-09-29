@@ -12,7 +12,8 @@
     "build:client": "cd client && npm run build",
     "build:admin": "cd server/admin && npm run build",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd admin && npm install",
-    "start": "cd server && npm start"
+    "start": "cd server && npm start",
+    "test:phase-c": "node scripts/run-phase-c-regression.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

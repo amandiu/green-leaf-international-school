@@ -22,6 +22,7 @@ import {
 } from '../services/leadershipService.js';
 import { saveLeadershipImage } from '../utils/imageUpload.js';
 import { UPLOAD_ERROR_CODES } from '../utils/imageSanitizer.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 /** Map service errors to responses; log everything else safely. */
@@ -113,6 +114,13 @@ export async function getOneLeadership(req, res) {
 export async function createLeadership(req, res) {
   try {
     const item = await createLeadershipMessage(req.body);
+    // D3 (§AN.19): role is the unique safe identifier per section.
+    await recordAdminMutation(req, {
+      action: 'LEADERSHIP_MESSAGE_CREATE',
+      entity: 'leadership_message',
+      entityId: item?.id,
+      meta: { role: item?.role ?? null },
+    });
     res.status(201).json({ success: true, data: item });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -130,6 +138,11 @@ export async function updateLeadership(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid leadership message id' });
     }
     const item = await updateLeadershipMessage(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'LEADERSHIP_MESSAGE_UPDATE',
+      entity: 'leadership_message',
+      entityId: id,
+    });
     res.status(200).json({ success: true, data: item });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -147,6 +160,11 @@ export async function deleteLeadership(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid leadership message id' });
     }
     await deleteLeadershipMessage(id);
+    await recordAdminMutation(req, {
+      action: 'LEADERSHIP_MESSAGE_DELETE',
+      entity: 'leadership_message',
+      entityId: id,
+    });
     res.status(200).json({ success: true, message: 'Leadership message deleted' });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -167,6 +185,12 @@ export async function setLeadershipStatus(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid leadership message id' });
     }
     const item = await setLeadershipMessageStatus(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'LEADERSHIP_MESSAGE_STATUS_SET',
+      entity: 'leadership_message',
+      entityId: id,
+      meta: { to: req.body?.is_active === false ? 'INACTIVE' : 'ACTIVE' },
+    });
     res.status(200).json({ success: true, data: item });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -183,6 +207,12 @@ export async function setLeadershipStatus(req, res) {
 export async function reorderLeadership(req, res) {
   try {
     const data = await reorderLeadershipMessages(req.body);
+    // D3: count only — the order payload itself is never logged.
+    await recordAdminMutation(req, {
+      action: 'LEADERSHIP_MESSAGE_REORDER',
+      entity: 'leadership_message',
+      meta: { count: Array.isArray(req.body?.order) ? req.body.order.length : null },
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -209,6 +239,10 @@ export async function getLeadershipSectionSettings(_req, res) {
 export async function updateLeadershipSectionSettings(req, res) {
   try {
     const data = await updateLeadershipSection(req.body);
+    await recordAdminMutation(req, {
+      action: 'LEADERSHIP_SECTION_UPDATE',
+      entity: 'leadership_section',
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -230,6 +264,12 @@ export async function uploadLeadershipImage(req, res) {
       return res.status(400).json({ success: false, message: 'No image file was received.' });
     }
     const image_url = await saveLeadershipImage(file.data);
+    // D3: server-generated URL only — never file contents.
+    await recordAdminMutation(req, {
+      action: 'UPLOAD_LEADERSHIP_IMAGE',
+      entity: 'upload',
+      entityId: image_url,
+    });
     res.status(201).json({ success: true, data: { image_url } });
   } catch (err) {
     if (err instanceof HttpError) {

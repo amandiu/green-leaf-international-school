@@ -19,6 +19,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import { readImageUpload } from '../middleware/upload.js';
 import { uploadAdminImage, uploadAdminDocument } from '../controllers/uploadsController.js';
 
@@ -38,7 +39,7 @@ const uploadRateLimit = rateLimit({
   message: { success: false, message: 'Too many uploads. Please try again later.' },
 });
 
-router.use(adminAuth);
+router.use(adminAuth, requirePermission('content.write'));
 router.post('/image', uploadRateLimit, readImageUpload, uploadAdminImage);
 
 // Phase B.6: DOCUMENT uploads share the SAME auth gate, raw-body

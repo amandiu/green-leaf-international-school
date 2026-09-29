@@ -14,6 +14,7 @@ import {
   createNewsItem, updateNewsItem, setNewsStatus, deleteNewsItem,
 } from '../services/newsService.js';
 import { validateType } from '../validators/newsValidation.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 const clampLimit = (v, max = 50) => {
@@ -101,6 +102,13 @@ export async function getAdminNewsItem(req, res) {
 export async function createAdminNewsItem(req, res) {
   try {
     const item = await createNewsItem(req.body);
+    // D3 (§AN.19): slug is the stable public identifier — safe meta.
+    await recordAdminMutation(req, {
+      action: 'NEWS_ITEM_CREATE',
+      entity: 'news_item',
+      entityId: item?.id,
+      meta: { slug: item?.slug ?? null },
+    });
     res.status(201).json(item);
   } catch (err) {
     if (err instanceof HttpError) {
@@ -114,7 +122,13 @@ export async function createAdminNewsItem(req, res) {
 /** PUT /api/admin/news/:id — update editable fields. */
 export async function updateAdminNewsItem(req, res) {
   try {
-    res.status(200).json(await updateNewsItem(req.params.id, req.body));
+    const item = await updateNewsItem(req.params.id, req.body);
+    await recordAdminMutation(req, {
+      action: 'NEWS_ITEM_UPDATE',
+      entity: 'news_item',
+      entityId: item?.id ?? req.params.id,
+    });
+    res.status(200).json(item);
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ error: err.message });
@@ -127,7 +141,14 @@ export async function updateAdminNewsItem(req, res) {
 /** PATCH /api/admin/news/:id/status — publish/unpublish/archive. */
 export async function patchAdminNewsStatus(req, res) {
   try {
-    res.status(200).json(await setNewsStatus(req.params.id, req.body));
+    const item = await setNewsStatus(req.params.id, req.body);
+    await recordAdminMutation(req, {
+      action: 'NEWS_ITEM_STATUS_SET',
+      entity: 'news_item',
+      entityId: item?.id ?? req.params.id,
+      meta: { to: req.body?.status ?? null },
+    });
+    res.status(200).json(item);
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ error: err.message });
@@ -145,6 +166,12 @@ export async function patchAdminNewsStatus(req, res) {
 export async function deleteAdminNewsItem(req, res) {
   try {
     const deleted = await deleteNewsItem(req.params.id);
+    await recordAdminMutation(req, {
+      action: 'NEWS_ITEM_DELETE',
+      entity: 'news_item',
+      entityId: req.params.id,
+      meta: null,
+    });
     res.status(200).json({ success: true, message: 'News item deleted', data: deleted });
   } catch (err) {
     if (err instanceof HttpError) {

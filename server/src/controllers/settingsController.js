@@ -11,6 +11,7 @@
 // ------------------------------------------------------------
 
 import { getEffectiveSettings, updateSettings } from '../services/siteSettingsService.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 /**
@@ -52,6 +53,13 @@ export async function getAdminSettings(_req, res) {
 export async function putAdminSettings(req, res) {
   try {
     const data = await updateSettings(req.body);
+    // D3 (§AN.19): one write touches MULTIPLE setting rows — meta
+    // records only the COUNT of top-level groups, never the values.
+    await recordAdminMutation(req, {
+      action: 'SITE_SETTINGS_UPDATE',
+      entity: 'site_setting',
+      meta: { count: typeof req.body === 'object' && req.body !== null ? Object.keys(req.body).length : 0 },
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err instanceof HttpError) {

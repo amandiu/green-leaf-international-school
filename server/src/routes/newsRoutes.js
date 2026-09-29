@@ -14,13 +14,14 @@ import {
   patchAdminNewsStatus, deleteAdminNewsItem,
 } from '../controllers/newsController.js';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const publicRouter = Router();
 publicRouter.get('/', listPublicNews);
 publicRouter.get('/:slug', getPublicNewsItem);
 
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 adminRouter.get('/', listAdminNews);
 adminRouter.get('/:id', getAdminNewsItem);
 adminRouter.post('/', createAdminNewsItem);

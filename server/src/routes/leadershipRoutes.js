@@ -12,6 +12,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   getLeadershipMessages,
   getPublicLeadership,
@@ -35,7 +36,7 @@ router.get('/', getLeadershipMessages);
 
 // ---- Admin CRUD (all behind adminAuth) ----
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 
 // NOTE: /reorder MUST be declared before /:id so "reorder" is
 // never parsed as an id.

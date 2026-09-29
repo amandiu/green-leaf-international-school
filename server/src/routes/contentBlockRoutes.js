@@ -16,6 +16,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   getPublicBlocks,
   getAdminBlocksController,
@@ -28,7 +29,7 @@ const router = Router();
 router.get('/blocks', getPublicBlocks);
 
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 adminRouter.get('/blocks', getAdminBlocksController);
 adminRouter.put('/blocks/:key', putBlock);
 adminRouter.patch('/blocks/:key/active', patchBlockActive);

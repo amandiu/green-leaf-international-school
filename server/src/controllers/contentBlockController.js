@@ -16,6 +16,7 @@ import {
   getEffectiveBlocks, getAdminBlocks, updateBlock,
   setBlockActive, deleteBlock,
 } from '../services/contentBlockService.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 /**
@@ -62,6 +63,11 @@ export async function putBlock(req, res) {
   const { key } = req.params;
   try {
     const data = await updateBlock(key, req.body);
+    await recordAdminMutation(req, {
+      action: 'CONTENT_BLOCK_UPDATE',
+      entity: 'content_block',
+      entityId: key,
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err instanceof HttpError) {
@@ -80,6 +86,12 @@ export async function patchBlockActive(req, res) {
   const { key } = req.params;
   try {
     const data = await setBlockActive(key, req.body?.isActive);
+    await recordAdminMutation(req, {
+      action: 'CONTENT_BLOCK_ACTIVE_SET',
+      entity: 'content_block',
+      entityId: key,
+      meta: { to: req.body?.isActive === true ? 'ACTIVE' : 'INACTIVE' },
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     if (err instanceof HttpError) {
@@ -99,6 +111,11 @@ export async function deleteBlockController(req, res) {
   const { key } = req.params;
   try {
     await deleteBlock(key);
+    await recordAdminMutation(req, {
+      action: 'CONTENT_BLOCK_DELETE',
+      entity: 'content_block',
+      entityId: key,
+    });
     res.status(200).json({ success: true, data: { deleted: key } });
   } catch (err) {
     if (err instanceof HttpError) {

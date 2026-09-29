@@ -46,6 +46,29 @@
 > tampered/legacy-token rejection, CSRF matrix, CMS round-trip,
 > admin_users byte-identical, rollback-gate) + all regression suites +
 > both builds; admin_users is preserved read-only (never dropped).
+> Phase D Item 1 (RBAC tables AUDIT + VERIFICATION) completed 2026-09-29 —
+> the D1 catalog schema was confirmed ALREADY DELIVERED by Phase C.2
+> (migrations 013/016 + seed 006; the §L `permissions` table superseded by
+> the §AN.5 code whitelist) and verified live via the C2 (49/49) and C7
+> (49/49) suites + byte-identical DB state; NO new migration/code.
+> Phase D Item 2 (requireRole/requirePermission middleware AUDIT +
+> VERIFICATION) completed 2026-09-29 — the D2 middleware was confirmed
+> ALREADY DELIVERED by Phase C.7 (`middleware/rbac.js`, mounted on all
+> admin routers, §AN.5 exact semantics) and verified live via the C7
+> suite (49/49) + a route-coverage probe over all 12 gated admin
+> surfaces + the §AN.11 public boundary; NO new middleware/code.
+> Phase D Item 3 (audit_logs) — the D3 pre-implementation audit
+> (2026-09-29) confirmed audit logging is genuinely MISSING; implementation
+> was intentionally STOPPED pending the event-model decisions, and the D3
+> DESIGN was FORMALIZED in SYSTEM_DESIGN §AN.19 (successful privileged
+> writes only, auth flows excluded, minimal whitelisted meta, no snapshots,
+> append-only, retention Phase Q). D3 was then IMPLEMENTED + verified
+> 2026-09-29 exactly per that formalized design — no redesign: migration
+> 018 + single append-only seam (AuditLog model + auditLogService) + 35
+> explicit audited privileged-write sites across 11 controllers; NO read
+> API/viewer/retention; `scripts/test-audit-logs.mjs` 61/61 live, the
+> suite is registered ONCE in the C9 runner (`d3-audit`), and the full
+> Phase C regression passes 14/14 suites (§24 checklist box now checked).
 
 ---
 
@@ -532,8 +555,8 @@ To build (only after audit-confirmed need; no duplicates):
     future work (C4 cutover / C7 gates / Phase N portals) — this box
     stays unchecked until middleware enforces ownership.
 - [ ] Role-specific notice targeting
-- [ ] Audit logging of privileged actions
-- [ ] Password reset flows (all roles)
+- [x] Audit logging of privileged actions (**Phase D.3 2026-09-29** — migration 018 + single append-only seam; successful privileged admin writes ONLY per §AN.19; auth flows/failed actions/reads excluded; NO read API/viewer — a viewer is future work)
+- [ ] Password reset flows (all roles) (**Phase C.5 progress:** the MECHANICS exist — migration 017 `password_resets`, hash-only single-use 60-min tokens, reset/change endpoints with §AN.12 limits, generic no-enumeration responses. **C6 progress:** the ADMIN-ISSUED issuance surface exists — admins generate one-time tokens per user from the UserManagement page. This box stays unchecked until email-delivered self-service reset works for all roles)
 
 ## 12. Database Modules
 
@@ -567,7 +590,7 @@ Proposed / future (PROPOSED — NOT present; do not treat as existing):
 - [ ] videos
 - [x] downloads (**Phase B.6** — migration 012; SAFE managed file references only, DB-mediated secure serving)
 - [x] contact_messages
-- [ ] audit_logs
+- [x] audit_logs (**Phase D.3** — migration 018; 35 audited privileged-write sites via `services/auditLogService.js`; append-only)
 
 ## 13. API Modules
 
@@ -587,6 +610,7 @@ Proposed / future (PROPOSED — public + admin pairs unless noted):
 - [x] /api/contact (public POST) + /api/admin/contact-messages
 - [x] /api/downloads (public list/categories + secure DB-mediated file serving) + /api/admin/downloads (full CRUD + status) (**Phase B.6**)
 - [ ] /api/teachers (public directory) + /api/admin/teachers
+- [ ] /api/auth/forgot-password + /api/auth/reset-password + /api/auth/change-password (**Phase C.5** — DONE: change-password authenticated; forgot/reset are the admin-issued mechanics; public email reset activates when the notification adapter exists)
 - [ ] /api/events (upcoming view) — or extend /api/news filters
 - [ ] /api/academics content (calendar, routines, syllabi) + admin
 - [ ] /api/admissions (content + applications) + admin
@@ -594,7 +618,8 @@ Proposed / future (PROPOSED — public + admin pairs unless noted):
 - [ ] /api/students (admin CRUD; portal /api/portal/student/*)
 - [ ] /api/portal/guardian/*
 - [ ] /api/portal/teacher/*
-- [ ] /api/admin/users, /api/admin/roles
+- [x] /api/admin/users (**Phase C.6** — list/create/status/role-assign/reset-token; adminAuth + per-operation live admin-role authorization; safe projections; admin-issued reset via the C5 primitive)
+- [ ] /api/admin/roles
 
 ## 14. UI/UX Requirements
 
@@ -629,7 +654,7 @@ To build (PROPOSED / FUTURE):
 - [ ] CSRF hardening review for state-changing admin routes (SameSite=Lax today)
 - [ ] Account lockout/progressive delay beyond rate limit
 - [ ] Password reset with expiring tokens
-- [ ] Audit logs for privileged actions
+- [x] Audit logs for privileged actions (**Phase D.3** — write-path auditing only per §AN.19; retention Phase Q)
 - [ ] Field-level encryption if sensitive student data is stored
 - [ ] Antivirus scanning note (re-encode is mitigation, not AV)
 
@@ -869,9 +894,9 @@ Key ordering facts derived from the actual architecture:
 - Depends on: Phase B (nothing in B blocks it, but B first keeps risk low). Exit: identities exist with roles; admin CRUD for accounts.
 
 **PHASE D — Roles / RBAC**
-1. `roles`, `permissions`, `role_permissions` tables (PROPOSED schema in SYSTEM_DESIGN).
-2. `requireRole` / `requirePermission` middleware evolved from `adminAuth` (fail-closed preserved).
-3. Audit logging of privileged actions (`audit_logs`).
+1. ~~`roles`, `permissions`, `role_permissions` tables (PROPOSED schema in SYSTEM_DESIGN)~~ — **DONE (delivered as Phase C.2, D-item-1 audit + verification 2026-09-29)**: the RBAC catalog schema shipped EARLY with the Phase C.2 identity foundation — migrations 013 (`roles` catalog + seed 006 admin/student/teacher/guardian) and 016 (`role_permissions`, empty by design per §AN.17 C7). The literal §L `permissions` catalog table was deliberately SUPERSEDED by the authoritative §AN.5 design (permission-key whitelist lives in code — `validators/identityValidation.js` PERMISSION_KEYS; §AN.13: "Where this section refines earlier PROPOSED notes (G, L), THIS section is authoritative"). Creating it now would duplicate a working mechanism. Verified against the live DB + source by the C2 (49/49) and C7 (49/49) suites: catalog intact, `role_permissions` empty-by-design, no schema gap for D2–D4 to consume.
+2. ~~`requireRole` / `requirePermission` middleware evolved from `adminAuth` (fail-closed preserved).~~ — **DONE (delivered as Phase C.7, D-item-2 audit + verification 2026-09-29)**: `middleware/rbac.js` implements the authoritative §AN.5 D2 contract EXACTLY — `requireRole(...codes)` coarse gate + `requirePermission(...keys)` fine gate, whitelist-validated gate arguments (unknown code = loud registration error), LIVE per-request resolution (active canonical users row + active user_roles membership + 30s-TTL permission cache), `admin` → `*` wildcard coarse default, generic 403 after the adminAuth 401 (fail-closed preserved), ADMIN_TOKEN bearer passes as a legacy script consumer (§AN.14.4); mounted on ALL admin routers — content.write on the CMS surfaces, a content.read/content.write split on the contact inbox, users.manage on /api/admin/users with the C6 per-operation service check preserved underneath. Verified: C7 suite 49/49 live (401/403 semantics, grant/revoke liveness ≤30s, escalation/IDOR, deactivation fail-closed, every admin router passes as admin) + a D2 route-coverage probe over all 12 gated admin surfaces (all 401 unauthenticated; the intentionally public §AN.11 boundary — /api/navigation, /api/uploads, /api/health — untouched; unknown admin path → generic JSON 404, no bypass route). NO new middleware created (duplicating C7 was explicitly rejected); NO DB change.
+3. ~~Audit logging of privileged actions (`audit_logs`)~~ — **DONE (Phase D.3, 2026-09-29; implemented per the already-formalized SYSTEM_DESIGN §AN.19 — no redesign)**: migration 018 `audit_logs` (additive, idempotent; §L fields — actor `user_id` nullable FK→users.id ON DELETE SET NULL + `actor_email` snapshot, controlled `action`/`entity` varchar(64) NOT NULL, string-typed `entity_id` snapshot (NO live FK to mutable targets), JSON `meta`, `ip` varchar(45), DB-stamped UTC `created_at`; indexes user_id / (entity, entity_id) / created_at); ONE shared append-only seam — `models/AuditLog.js` (INSERT-ONLY, `at` never accepted from callers or clients) + `services/auditLogService.js` `recordAdminMutation(req, {action, entity, entityId, meta})` (server-resolved actor from `req.adminUser`/bearer, `ip = req.ip` under the established trust-proxy setting, controlled action/entity regexes, minimal meta whitelist shape, never throws); 35 EXPLICIT audited privileged-write sites across 11 controllers (users, uploads, navigation, settings, content blocks, news, downloads, gallery, leadership, page sections, contact status/delete); EXCLUDED per §AN.19: auth flows, failed actions (400/403/404/rollback), reads/public/health; NO read API, NO viewer, NO retention (Phase Q). Verified: `scripts/test-audit-logs.mjs` 61/61 live DB+HTTP (schema, success rows + field provenance, tampering, failure exclusions, auth-flow exclusions, read exclusions, meta-security source scan, append-only + audit endpoints 404) registered ONCE in the C9 runner as `d3-audit`; full Phase C regression 14/14 suites green
 4. Apply least-privilege defaults; all existing admin routes keep working.
 - Depends on: C. Exit: two admins with different roles demonstrably see different permissions.
 
@@ -978,7 +1003,10 @@ authorization (where applicable) + a tested working flow all exist.
 - [x] Identity foundation (**Phase C.2** — `roles`/`users`/`user_roles`/`role_permissions` + seed 006 + models/identityService/validator; service-level only, no auth path consumes it yet — that is the C4 cutover)
 - [x] Ownership-scoping helper layer (**Phase C.3** — `services/ownershipScoping.js`: canonical `users.id` conventions + §AN.6 scoping primitives; helpers-only, no auth/API/DB surface; middleware consumers arrive with C4/C7)
 - [x] Authentication cutover (**Phase C.4** — users is the canonical authentication source; 1:1 verified non-destructive admin_users → users copy with the mandatory gate; session claims `roles` + `pwdAt` with password-change invalidation; Origin/Referer CSRF baseline; `admin:create` canonical; verified live 55/55 + regressions + builds)
-- [ ] User foundation (identity + password reset + admin user UI)
+- [x] Password flows (**Phase C.5** — migration 017 `password_resets`; SHA-256 hash-only one-time 60-minute reset tokens with transactional single-use consumption; `POST /api/auth/change-password` (authenticated, pwdAt invalidation) + `POST /api/auth/forgot-password` (5/15min IP + per-email) + `POST /api/auth/reset-password` (10/15min); generic responses, no account enumeration; admin SPA change-password page; ADMIN-ISSUED until an email adapter exists — no email delivery, no requireRole (C7 boundary respected); verified live 110/110 + regressions + builds)
+- [x] Admin user management (**Phase C.6** — `/api/admin/users`: list/create/activate-deactivate/role-assign/admin-issued reset tokens; adminAuth + per-operation LIVE admin-role authorization (fail-closed 403 on revoked/deactivated callers; NOT requireRole/C7); orchestration reuses the C2 identity seams + C5 reset primitive; safe projections only; admin SPA UserManagement page; NO new tables; verified live 86/86 + regressions + builds)
+- [x] RBAC / permission enforcement (**Phase C.7** — `middleware/rbac.js`: requireRole + requirePermission, LIVE DB resolution (active identity + active membership + 30s-TTL permission cache), `admin` → `*` wildcard, whitelist-validated gate args (unknown code = loud registration error), generic 403 after adminAuth 401; mounted on all admin routers — content.write on CMS surfaces, content.read/write split on the contact inbox, users.manage on /api/admin/users with the C6 service check preserved; ADMIN_TOKEN bearer passes as a legacy script consumer (§AN.14.4); NO DB change, role_permissions delivered EMPTY; admin client surfaces 403 without dropping the session; verified live 49/49 + regressions + builds)
+- [ ] User foundation (identity + password reset + admin user UI) (**Phase C COMPLETE C2–C7** — identity foundation, auth cutover, ownership seams, password flows, admin user management and RBAC enforcement are all DONE and live-verified; this legacy §24 line is retained only as a Phase-D-era label)
 - [ ] Roles & permissions
 - [ ] Classes/Sections/Subjects
 - [ ] Academic calendar
@@ -1008,13 +1036,33 @@ authorization (where applicable) + a tested working flow all exist.
 > **Phase C status (2026-09-28):** Items 1 (audit + design, SYSTEM_DESIGN
 > §AN), 2 (identity foundation: migrations 013–016 + seed 006 + models /
 > identityService / validator — service-level), 3 (ownership-scoping
-> helper layer) and 4 (AUTHENTICATION CUTOVER: canonical users login,
+> helper layer), 4 (AUTHENTICATION CUTOVER: canonical users login,
 > 1:1-verified copy + gate, session claims + pwdAt invalidation, CSRF
-> baseline, canonical admin:create) are DONE and verified — C4 live
-> (`scripts/test-c4-cutover.mjs`, 55/55) + all regression suites + both
-> builds. Remaining Phase C items (C5 password change/reset, C6 admin
-> user UI, C7 requireRole/requirePermission enforcement) remain
-> unchecked below.
+> baseline, canonical admin:create — `scripts/test-c4-cutover.mjs`,
+> 55/55), 5 (PASSWORD CHANGE + RESET: migration 017 password_resets,
+> hash-only one-time 60-min reset tokens with transactional single-use
+> consumption, §AN.12 rate limits, /api/auth change-password +
+> forgot-password + reset-password, admin SPA change-password UI —
+> `scripts/test-password-flows.mjs`, 110/110), 6 (ADMIN USER
+> MANAGEMENT: /api/admin/users — list/create/status/role-assign/
+> admin-issued reset tokens with a per-operation live admin-role
+> check; admin SPA UserManagement page —
+> `scripts/test-admin-user-management.mjs`, 86/86), 7 (RBAC /
+> PERMISSION ENFORCEMENT: requireRole + requirePermission middleware
+> with live DB resolution, admin → * wildcard, whitelist-validated
+> gate args, mounted on all admin routers; 403 handling in the admin
+> client; `scripts/test-rbac-permissions.mjs`, 49/49) and 8
+> (OWNERSHIP-SCOPED API FOUNDATION: middleware/ownershipScope.js —
+> attachOwnershipScope/requireOwnershipScope consuming the C3
+> §AN.6 primitives, confirm-only client ids, NO public endpoints;
+> `scripts/test-ownership-api-foundation.mjs`, 27/27) and 9 (TEST
+> SUITE CONSOLIDATION: `npm run test:phase-c` — deterministic runner
+> for all existing C2–C8 + B-era suites with fresh-bucket isolation,
+> per-suite statuses/counts and accurate known-issue reporting —
+> 850 checks green) are DONE and verified. **PHASE C IS COMPLETE**
+> (C1 design + C2–C9 all verified; c4-cutover live run remains a
+> documented NOT RUN pending real-credential provision, and the
+> leadership PNG fixture issue is pre-existing/environment).
 
 From this point forward: **PROJECT_MASTER_PLAN.md = MASTER ROADMAP**;
 **SYSTEM_DESIGN.md = MASTER TECHNICAL DESIGN**. Every future coding task must:

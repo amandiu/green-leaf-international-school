@@ -20,6 +20,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   postContact,
   listContactMessages,
@@ -33,14 +34,17 @@ const router = Router();
 // ---- Public submit (the ONLY public contact endpoint) ----
 router.post('/', postContact);
 
-// ---- Admin inbox (all behind adminAuth) ----
+// ---- Admin inbox (adminAuth + C7 permission gates) ----
 const adminRouter = Router();
 adminRouter.use(adminAuth);
+// C7 split (§AN.5): reading the inbox is content.read; mutating
+// (status/delete) is content.write. (admin → * passes everything;
+// existing admin behavior is unchanged.)
 
-adminRouter.get('/', listContactMessages);
-adminRouter.get('/:id', getOneContactMessage);
-adminRouter.patch('/:id/status', patchContactMessageStatus);
-adminRouter.delete('/:id', deleteContactMessageController);
+adminRouter.get('/', requirePermission('content.read'), listContactMessages);
+adminRouter.get('/:id', requirePermission('content.read'), getOneContactMessage);
+adminRouter.patch('/:id/status', requirePermission('content.write'), patchContactMessageStatus);
+adminRouter.delete('/:id', requirePermission('content.write'), deleteContactMessageController);
 
 export { adminRouter as adminContactRouter };
 export default router;

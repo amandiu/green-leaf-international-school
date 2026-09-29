@@ -264,7 +264,7 @@ console.log('\n[4] Privacy — no public identity surface');
 const publicProbe = await api('GET', '/api/users');
 ok(publicProbe.status === 404, 'GET /api/users → 404 (no public identity endpoint)');
 const adminUsersProbe = await api('GET', '/api/admin/users');
-ok(adminUsersProbe.status === 404, 'GET /api/admin/users → 404 (correctly unmounted in C2; the C6 UI mounts it admin-gated)');
+ok(adminUsersProbe.status === 401 || adminUsersProbe.status === 404, 'GET /api/admin/users is NOT publicly readable (C2 era: 404 unmounted; since C6: 401 admin-gated)');
 
 // Public settings/news must not leak identity tables
 const settings = await api('GET', '/api/settings');

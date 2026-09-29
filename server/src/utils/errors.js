@@ -26,3 +26,13 @@ export function conflict(message) {
 export function unauthorized(message = 'Authentication required') {
   return new HttpError(401, message);
 }
+
+/**
+ * Authenticated but not permitted (§AN.11: 403 is introduced with
+ * the role-aware gates; Phase C.6 uses it for the single approved
+ * admin-role boundary on /api/admin/users — the full RBAC 403
+ * framework remains C7).
+ */
+export function forbidden(message = 'Access denied') {
+  return new HttpError(403, message);
+}

@@ -62,6 +62,24 @@ export async function findRoleCodesByUserId(userId) {
   return rows.map((row) => row.code);
 }
 
+/**
+ * Resolved ACTIVE role membership ({ id, code }) for one canonical
+ * user id, primary first. Phase C.7: requireRole/requirePermission
+ * resolve the caller's roles LIVE through this join — permission
+ * keys are looked up per role_id through the §AN.5 short-TTL cache
+ * (identityService.getRolePermissions).
+ */
+export async function findRoleMembershipByUserId(userId) {
+  const [rows] = await pool.query(
+    'SELECT `r`.`id`, `r`.`code` FROM `user_roles` `ur`'
+      + ' JOIN `roles` `r` ON `r`.`id` = `ur`.`role_id`'
+      + ' WHERE `ur`.`user_id` = ? AND `r`.`is_active` = 1'
+      + ' ORDER BY `ur`.`is_primary` DESC, `ur`.`id` ASC',
+    [userId],
+  );
+  return rows.map((row) => ({ id: row.id, code: row.code }));
+}
+
 // ---- transaction helpers (service supplies the connection) ----
 
 /** Insert one assignment row on the given connection. */

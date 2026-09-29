@@ -14,6 +14,12 @@
 // in the message so the UI can show a meaningful countdown instead of
 // a dead end. No automatic retry happens here — retrying immediately
 // into a throttled window only makes throttling worse.
+//
+// Phase C.7 (§AN.15): 403 is now an explicit authorization denial
+// (requireRole/requirePermission). The client surfaces the safe
+// generic message to the caller — it NEVER logs the user out (a 403
+// means the session is valid; only 401/503 lock the UI), and pages
+// render the denial through their existing Alert error states.
 // ------------------------------------------------------------
 
 /**
@@ -62,6 +68,11 @@ async function request(path, { method = 'GET', body, headers: extraHeaders } = {
 
     if (!response.ok) {
       const message = payload?.message || `Request failed (${response.status})`;
+      if (response.status === 403) {
+        // Authorization denial (C7): the session is VALID — surface
+        // the generic message; do not drop the session.
+        throw { status: 403, message };
+      }
       if (response.status === 429) {
         const retryAfterMs = Number(response.headers.get('retry-after')) * 1000 || null;
         throw {

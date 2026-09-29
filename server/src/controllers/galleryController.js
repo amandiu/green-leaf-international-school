@@ -25,6 +25,7 @@ import {
   setGalleryItemStatus,
   deleteGalleryItem,
 } from '../services/galleryService.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 /** Map service errors to responses; log everything else safely. */
@@ -128,6 +129,13 @@ export async function getOneGalleryItem(req, res) {
 export async function createGallery(req, res) {
   try {
     const data = await createGalleryItem(req.body);
+    // D3 (§AN.19): title is the safe resource label.
+    await recordAdminMutation(req, {
+      action: 'GALLERY_ITEM_CREATE',
+      entity: 'gallery_item',
+      entityId: data?.id,
+      meta: { title: data?.title ?? null },
+    });
     res.status(201).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -145,6 +153,11 @@ export async function updateGallery(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid gallery item id' });
     }
     const data = await updateGalleryItem(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'GALLERY_ITEM_UPDATE',
+      entity: 'gallery_item',
+      entityId: id,
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -162,6 +175,12 @@ export async function patchGalleryStatus(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid gallery item id' });
     }
     const data = await setGalleryItemStatus(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'GALLERY_ITEM_STATUS_SET',
+      entity: 'gallery_item',
+      entityId: id,
+      meta: { to: req.body?.status ?? null },
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {
@@ -179,6 +198,11 @@ export async function deleteGallery(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid gallery item id' });
     }
     const data = await deleteGalleryItem(id);
+    await recordAdminMutation(req, {
+      action: 'GALLERY_ITEM_DELETE',
+      entity: 'gallery_item',
+      entityId: id,
+    });
     res.status(200).json({ success: true, data });
   } catch (err) {
     return sendServiceError(res, err, {

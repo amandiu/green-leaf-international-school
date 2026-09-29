@@ -26,6 +26,7 @@ import {
   resolvePublishedDownloadFile,
 } from '../services/downloadService.js';
 import { HttpError, badRequest } from '../utils/errors.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 
 const clampLimit = (v, max = 100) => {
   const n = Number.parseInt(v, 10);
@@ -155,6 +156,13 @@ export async function getAdminDownload(req, res) {
 export async function createAdminDownload(req, res) {
   try {
     const item = await createDownload(req.body);
+    // D3 (§AN.19): title is the safe resource label.
+    await recordAdminMutation(req, {
+      action: 'DOWNLOAD_CREATE',
+      entity: 'download',
+      entityId: item?.id,
+      meta: { title: item?.title ?? null },
+    });
     res.status(201).json({ success: true, data: item });
   } catch (err) {
     if (err instanceof HttpError) {
@@ -170,7 +178,13 @@ export async function updateAdminDownload(req, res) {
   try {
     const id = parseId(req.params.id);
     if (!id) throw badRequest('Invalid download id');
-    res.status(200).json({ success: true, data: await updateDownload(id, req.body) });
+    const item = await updateDownload(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'DOWNLOAD_UPDATE',
+      entity: 'download',
+      entityId: id,
+    });
+    res.status(200).json({ success: true, data: item });
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ success: false, message: err.message });
@@ -185,7 +199,14 @@ export async function patchAdminDownloadStatus(req, res) {
   try {
     const id = parseId(req.params.id);
     if (!id) throw badRequest('Invalid download id');
-    res.status(200).json({ success: true, data: await setDownloadStatus(id, req.body) });
+    const item = await setDownloadStatus(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'DOWNLOAD_STATUS_SET',
+      entity: 'download',
+      entityId: id,
+      meta: { to: req.body?.status ?? null },
+    });
+    res.status(200).json({ success: true, data: item });
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ success: false, message: err.message });
@@ -200,7 +221,13 @@ export async function deleteAdminDownload(req, res) {
   try {
     const id = parseId(req.params.id);
     if (!id) throw badRequest('Invalid download id');
-    res.status(200).json({ success: true, data: await deleteDownload(id) });
+    const item = await deleteDownload(id);
+    await recordAdminMutation(req, {
+      action: 'DOWNLOAD_DELETE',
+      entity: 'download',
+      entityId: id,
+    });
+    res.status(200).json({ success: true, data: item });
   } catch (err) {
     if (err instanceof HttpError) {
       return res.status(err.status).json({ success: false, message: err.message });

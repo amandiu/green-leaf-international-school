@@ -12,6 +12,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   getPublicSettings,
   getAdminSettings,
@@ -22,7 +23,7 @@ const router = Router();
 router.get('/', getPublicSettings);
 
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 adminRouter.get('/', getAdminSettings);
 adminRouter.put('/', putAdminSettings);
 

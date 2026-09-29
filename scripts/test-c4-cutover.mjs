@@ -371,7 +371,7 @@ console.log('\n[G] Security — admin_users untouched, no leakage, no new surfac
   const users404 = await api('GET', '/api/users');
   ok(users404.status === 404, 'GET /api/users → 404 (C4 added no public identity surface)');
   const adminUsers404 = await api('GET', '/api/admin/users');
-  ok(adminUsers404.status === 404, 'GET /api/admin/users → 404 (C6 scope, correctly unmounted)');
+  ok(adminUsers404.status === 401 || adminUsers404.status === 404, 'GET /api/admin/users is NOT publicly readable (C4 era: 404 unmounted; since C6: 401 admin-gated)');
 
   // Every login failure path returned the SAME message — asserted in [B];
   // additionally confirm the inactive-account path would be generic too

@@ -18,6 +18,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   getPublicPage,
   getAdminPage,
@@ -28,7 +29,7 @@ const router = Router();
 router.get('/:page', getPublicPage);
 
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 adminRouter.get('/:page', getAdminPage);
 adminRouter.put('/:page/sections/:key', putPageSection);
 

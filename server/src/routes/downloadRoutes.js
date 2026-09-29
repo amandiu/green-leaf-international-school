@@ -27,6 +27,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   listPublicDownloads,
   listPublicDownloadCategories,
@@ -48,7 +49,7 @@ router.get('/:id/file', downloadFile);
 
 // ---- Admin CRUD (all behind adminAuth) ----
 const adminRouter = Router();
-adminRouter.use(adminAuth);
+adminRouter.use(adminAuth, requirePermission('content.write'));
 
 adminRouter.get('/', listAdminDownloads);
 adminRouter.post('/', createAdminDownload);

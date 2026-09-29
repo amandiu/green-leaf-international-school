@@ -272,7 +272,7 @@ ok(adminGate.status === 401, 'existing adminAuth gate unchanged (401 without ses
 const users404 = await api('GET', '/api/users');
 ok(users404.status === 404, 'GET /api/users → 404 (C3 added NO public identity surface)');
 const adminUsers404 = await api('GET', '/api/admin/users');
-ok(adminUsers404.status === 404, 'GET /api/admin/users → 404 (C6 will mount it, not C3)');
+ok(adminUsers404.status === 401 || adminUsers404.status === 404, 'GET /api/admin/users is NOT publicly readable (C3 adds no surface; since C6 it is admin-gated 401)');
 
 const publicNews = await api('GET', '/api/news?limit=1');
 ok(publicNews.status === 200 || publicNews.status === 404, 'public news unaffected');

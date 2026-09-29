@@ -8,6 +8,7 @@
 
 import { Router } from 'express';
 import adminAuth from '../middleware/sessionAuth.js';
+import { requirePermission } from '../middleware/rbac.js';
 import {
   listNavigation,
   createNavigation,
@@ -17,7 +18,11 @@ import {
 
 const router = Router();
 
-router.use(adminAuth);
+// Phase C.7 (§AN.5): coarse permission gate ON TOP of the binary
+// adminAuth gate. The seeded `admin` role inherits `*` (§AN.5 coarse
+// default), so every existing admin flow is unchanged; a non-admin
+// identity (valid session, no admin role) is denied 403 here.
+router.use(adminAuth, requirePermission('content.write'));
 
 router.get('/', listNavigation);
 router.post('/', createNavigation);

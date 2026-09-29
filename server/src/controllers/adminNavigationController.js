@@ -13,6 +13,7 @@ import {
   updateNavigationItem,
   deleteNavigationItem,
 } from '../services/navigationService.js';
+import { recordAdminMutation } from '../services/auditLogService.js';
 import { HttpError } from '../utils/errors.js';
 
 export async function listNavigation(_req, res) {
@@ -28,6 +29,14 @@ export async function listNavigation(_req, res) {
 export async function createNavigation(req, res) {
   try {
     const item = await createNavigationItem(req.body);
+    // D3 (§AN.19): audit the successful write — slug is the stable
+    // safe identifier; the payload itself is never logged.
+    await recordAdminMutation(req, {
+      action: 'NAVIGATION_ITEM_CREATE',
+      entity: 'navigation_item',
+      entityId: item?.id,
+      meta: { slug: item?.slug ?? null },
+    });
     res.status(201).json({ success: true, data: item });
   } catch (err) {
     if (err instanceof HttpError) {
@@ -45,6 +54,11 @@ export async function updateNavigation(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid menu item id' });
     }
     const item = await updateNavigationItem(id, req.body);
+    await recordAdminMutation(req, {
+      action: 'NAVIGATION_ITEM_UPDATE',
+      entity: 'navigation_item',
+      entityId: id,
+    });
     res.status(200).json({ success: true, data: item });
   } catch (err) {
     if (err instanceof HttpError) {
@@ -62,6 +76,11 @@ export async function deleteNavigation(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid menu item id' });
     }
     await deleteNavigationItem(id);
+    await recordAdminMutation(req, {
+      action: 'NAVIGATION_ITEM_DELETE',
+      entity: 'navigation_item',
+      entityId: id,
+    });
     res.status(200).json({ success: true, message: 'Menu item deleted' });
   } catch (err) {
     if (err instanceof HttpError) {
