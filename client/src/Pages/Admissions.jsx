@@ -78,7 +78,7 @@ function Admissions() {
     path: '/admissions',
   });
 
-  const { settings } = useSettings();
+  const { settings: _settings } = useSettings();
   const introRef = useScrollReveal();
   const processRef = useScrollReveal();
   const reqRef = useScrollReveal();

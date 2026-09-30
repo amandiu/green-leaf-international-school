@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { siteConfig } from '../../../shared/config/siteConfig';
-import { useScrollReveal } from '../hooks/useScrollReveal';
 import useDownloads from '../hooks/useDownloads';
 import { SectionWrapper, SectionHeader } from '../Components/ui/SectionWrapper';
 import { downloadFileUrl, formatDownloadSize } from '../services/downloadService';

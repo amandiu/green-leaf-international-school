@@ -196,7 +196,7 @@ export function applyPageSeo({
  * the page-scoped extras (canonical, og:url, twitter, JSON-LD).
  */
 export function restoreGlobalSeo(settings) {
-  const { identity, branding, seo } = {
+  const { branding, seo } = {
     ...siteConfig,
     ...(settings || {}),
   };

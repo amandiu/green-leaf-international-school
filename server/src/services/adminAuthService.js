@@ -25,7 +25,6 @@ import { createUser } from './identityService.js';
 import { createSessionToken } from '../utils/sessionToken.js';
 import { badRequest, unauthorized } from '../utils/errors.js';
 
-const BCRYPT_ROUNDS = 12;
 
 /** Generic credential error — never reveals which part was wrong. */
 const GENERIC_CREDENTIALS = 'Invalid email or password.';

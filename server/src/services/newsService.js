@@ -168,7 +168,7 @@ export async function getAdminNewsById(id) {
 
 /** Generate a unique slug (numeric suffixes on collision). */
 async function uniqueSlug(desired, excludeId = null) {
-  let base = slugify(desired || 'news') || 'news';
+  const base = slugify(desired || 'news') || 'news';
   let candidate = base;
   let n = 2;
   // Bounded loop — slug space is huge; 200 attempts is paranoia.

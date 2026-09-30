@@ -23,7 +23,7 @@
 
 import {
   findPublished, findPublishedCategories, findAllAdmin, findById,
-  countImage, insert, update, updateStatus, remove,
+  insert, update, updateStatus, remove,
 } from '../models/GalleryItem.js';
 import {
   validateGalleryPayload,

@@ -24,7 +24,6 @@ import {
   uploadDocument,
 } from '../services/downloadService';
 import { Alert, Loader } from '../components/Feedback';
-import ConfirmDialog from '../components/ConfirmDialog';
 
 const CATEGORIES = [
   'Prospectus', 'Syllabus', 'Routine', 'Question Papers',

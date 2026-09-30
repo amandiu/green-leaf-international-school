@@ -18,7 +18,7 @@
 
 import {
   findPublished, findPublishedCategories, findAllAdmin, findById,
-  countFile, insert, update, updateStatus, remove,
+  insert, update, updateStatus, remove,
 } from '../models/Download.js';
 import {
   validateDownloadPayload,

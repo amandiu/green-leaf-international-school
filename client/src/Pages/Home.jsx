@@ -66,7 +66,7 @@ function Hero() {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [heroImages.length]);
 
   return (
     <section className="relative min-h-[520px] md:min-h-[600px] lg:min-h-[620px] flex items-center overflow-hidden bg-charcoal-50">
@@ -330,29 +330,6 @@ function RecentNewsSection() {
 /* ═══════════════════════════════════════════
    STUDENT LIFE
    ═══════════════════════════════════════════ */
-const lifeImages = [
-  {
-    src: "/Activity/791074857_1519300476879129_5256173980750495448_n.jpg",
-    alt: "Students participating in school activities",
-  },
-  {
-    src: "/Activity/733146204_1461550822654095_1531413830165513343_n.jpg",
-    alt: "School event on campus",
-  },
-  {
-    src: "/Activity/745503622_1472778644864646_857229043481260756_n.jpg",
-    alt: "Students in classroom",
-  },
-  {
-    src: "/Activity/798261940_1522758883199955_4596081823843794397_n.jpg",
-    alt: "Student life on campus",
-  },
-  {
-    src: "/Activity/799202494_1523030196506157_181619563109164848_n.jpg",
-    alt: "School activities and celebrations",
-  },
-];
-
 function StudentLife() {
   const ref = useScrollReveal();
   const { content } = useHomeContent();

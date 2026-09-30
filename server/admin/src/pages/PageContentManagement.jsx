@@ -261,7 +261,7 @@ function PageContentManagement({ page, onUnauthorized }) {
               description="The bottom call-to-action band. This page's own CTA — distinct from the shared reusable Admissions CTA block."
               onUnauthorized={onUnauthorized}
             >
-              {({ values, set, TextField: TF, TextAreaField: TA }) => (
+              {({ values, set, TextField: TF }) => (
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <TF id="acad-cta-title" label="Title" required maxLength={200}
                     value={values.title} onChange={(v) => set('title', v)} />

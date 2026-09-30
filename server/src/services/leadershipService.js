@@ -22,7 +22,6 @@ import {
 } from '../models/LeadershipMessage.js';
 import {
   findFirstSection,
-  findFirstPublicSection,
   createIfMissing as createSectionIfMissing,
   updateFirstSection,
 } from '../models/LeadershipSection.js';

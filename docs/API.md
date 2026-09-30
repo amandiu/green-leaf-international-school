@@ -27,23 +27,25 @@ Check if the API server is running.
 
 ---
 
-## API Endpoints (Planned)
+## API Endpoints (Implemented)
 
-> These will be implemented in Phase 5.
+> The API is live; this table lists the core public endpoints. The complete
+> mounted route map (public + admin) is maintained in SYSTEM_DESIGN.md §E.
 
-| Method | Endpoint           | Description              |
-|--------|-------------------|--------------------------|
-| POST   | `/api/auth/login` | Admin login              |
-| POST   | `/api/auth/logout`| Admin logout             |
-| GET    | `/api/home`       | Homepage content         |
-| GET    | `/api/about`      | About page content       |
-| GET    | `/api/academics`  | Academics content        |
-| GET    | `/api/admissions` | Admissions content       |
-| GET    | `/api/gallery`    | Gallery images           |
-| GET    | `/api/news`       | News articles            |
-| GET    | `/api/videos`     | Video listings           |
-| POST   | `/api/contact`    | Submit contact form      |
-| GET    | `/api/settings`   | Site settings            |
+| Method | Endpoint                  | Description                                   |
+|--------|---------------------------|-----------------------------------------------|
+| POST   | `/api/auth/login`         | Admin login (session cookie)                  |
+| POST   | `/api/auth/logout`        | Admin logout                                  |
+| GET    | `/api/navigation`         | Public navigation tree                        |
+| GET    | `/api/pages/home`         | Homepage content (resolved sections)          |
+| GET    | `/api/content/blocks`     | Reusable content blocks                       |
+| GET    | `/api/gallery`            | Gallery images (PUBLISHED)                    |
+| GET    | `/api/news`               | News articles (`?type=&limit=&offset=`)       |
+| GET    | `/api/news/:slug`         | News detail (PUBLISHED only)                  |
+| GET    | `/api/downloads`          | Downloads Center (PUBLISHED)                  |
+| GET    | `/api/leadership`         | Leadership section + messages                 |
+| POST   | `/api/contact`            | Submit contact form                           |
+| GET    | `/api/settings`           | Site settings (effective merged)              |
 
 ---
 
@@ -62,10 +64,10 @@ All errors follow a consistent structure:
 
 ## Authentication
 
-> Will be implemented in Phase 6.
+Admin sessions use an HMAC-SHA256 signed, HttpOnly session cookie issued by
+`POST /api/auth/login` (SameSite=Lax; `secure` in production). There is no JWT.
+State-changing `/api/auth/*` and `/api/admin/*` requests are additionally
+guarded by Origin/Referer validation.
 
-Admin routes will require a valid JWT token in the `Authorization` header:
-
-```
-Authorization: Bearer <token>
-```
+Scripts/tests may use the deprecated `Authorization: Bearer <ADMIN_TOKEN>`
+transition path.

@@ -16,16 +16,18 @@
 //     own live-HTTP + live-MariaDB semantics, fixtures and cleanup
 //   - deterministic order: identity (C2) → ownership (C3) →
 //     password (C5) → admin users (C6) → rbac (C7) → api foundation
-//     (C8) → audit (D3) → B-era regression suites
+//     (C8) → audit (D3) → least-privilege defaults (D4) → B-era
+//     regression suites
 //   - FRESH rate-limit buckets between HTTP suites: the express-
 //     rate-limit buckets are per-process/in-memory, so back-to-back
 //     suites otherwise throttle each other (login 10/10min, uploads
 //     30/15min …). The runner restarts the API via
 //     scripts/restart-dev-server.sh (established since C5).
 //   - accurate reporting: each suite reports PASSED n/n,
-//     FAILED n/m (with the failing labels), or SKIPPED — the
-//     known-pre-existing leadership fixture issue and the missing
-//     eslint binary are reported as such, never as green
+//     FAILED n/m (with the failing labels), or SKIPPED — known
+//     operator-dependent items (c4-cutover) are reported as such,
+//     never as green. (The former leadership fixture known-issue was
+//     repaired and promoted to a registered suite in the remediation.)
 //   - exit code: 0 only when every selected suite PASSED (skipped
 //     suites do not fail the run — but are listed loudly)
 // ------------------------------------------------------------
@@ -46,7 +48,9 @@ const SUITES = [
   { key: 'c7-rbac', file: 'scripts/test-rbac-permissions.mjs', group: 'phase-c' },
   { key: 'c8-api-foundation', file: 'scripts/test-ownership-api-foundation.mjs', group: 'phase-c' },
   { key: 'd3-audit', file: 'scripts/test-audit-logs.mjs', group: 'phase-c' },
+  { key: 'd4-least-privilege', file: 'scripts/test-d4-least-privilege.mjs', group: 'phase-c' },
   { key: 'contact', file: 'scripts/test-contact-api.mjs', group: 'era-b' },
+  { key: 'leadership', file: 'scripts/test-leadership-api.mjs', group: 'era-b' },
   { key: 'downloads', file: 'scripts/test-downloads-api.mjs', group: 'era-b' },
   { key: 'news', file: 'scripts/test-news-api.mjs', group: 'era-b' },
   { key: 'page-sections', file: 'scripts/test-page-sections-api.mjs', group: 'era-b' },
@@ -55,7 +59,10 @@ const SUITES = [
   { key: 'image-upload', file: 'scripts/test-image-upload.mjs', group: 'era-b' },
 ];
 
-/** Known pre-existing issues — reported accurately, never silenced. */
+/** Known pre-existing issues — reported accurately, never silenced.
+ *  (The leadership suite was previously listed here for a corrupt
+ *  synthetic PNG fixture; the fixture was repaired in the remediation
+ *  pass and the suite now runs as a regular registered suite. */
 const KNOWN_ISSUES = [
   {
     key: 'c4-cutover',
@@ -64,14 +71,6 @@ const KNOWN_ISSUES = [
     status: 'NOT RUN',
     reason: 'requires real admin credentials (C4_TEST_ADMIN_EMAIL / C4_TEST_ADMIN_PASSWORD). '
       + 'Operator declined to provide them (C4 decision record); the C4 surface is covered by the C5/C6/C7 regression sections instead.',
-  },
-  {
-    key: 'leadership',
-    file: 'scripts/test-leadership-api.mjs',
-    group: 'era-b',
-    status: 'PRE-EXISTING FAILURE',
-    reason: 'the suite\'s synthetic 1×1 PNG fixture is corrupt (libpng read error) on the untouched B-era upload pipeline. '
-      + 'Classified pre-existing/environment/test-fixture in C5–C8; NOT fixed here (C9 boundary).',
   },
 ];
 

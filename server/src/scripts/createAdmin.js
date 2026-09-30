@@ -16,7 +16,6 @@ import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import 'dotenv/config';
 import '../config/db.js';
-import pool from '../config/db.js';
 import { createAdminAccount, adminCount } from '../services/adminAuthService.js';
 import { closePool } from '../config/db.js';
 

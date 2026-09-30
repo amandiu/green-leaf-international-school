@@ -15,7 +15,6 @@ import adminAuth from '../middleware/sessionAuth.js';
 import { requirePermission } from '../middleware/rbac.js';
 import {
   getLeadershipMessages,
-  getPublicLeadership,
   listLeadershipMessages,
   getOneLeadership,
   createLeadership,
@@ -23,8 +22,6 @@ import {
   deleteLeadership,
   setLeadershipStatus,
   reorderLeadership,
-  getLeadershipSectionSettings,
-  updateLeadershipSectionSettings,
   uploadLeadershipImage,
 } from '../controllers/leadershipController.js';
 import { readImageUpload } from '../middleware/upload.js';

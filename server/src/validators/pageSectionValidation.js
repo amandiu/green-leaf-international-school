@@ -74,12 +74,11 @@ const STRING_MAX = 500;
 const DESCRIPTION_MAX = 1000;
 const HEADLINE_MAX = 200;
 const METADATA_MAX = 60;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HTTP_URL_RE = /^https?:\/\/[^\s]+$/i;
-const ASSET_RE = /^(\/[A-Za-z0-9\-._~!$&'()*+,;=:@%\/ ]+|https?:\/\/[^\s]+)$/i;
+const ASSET_RE = /^(\/[A-Za-z0-9\-._~!$&'()*+,;=:@%/ ]+|https?:\/\/[^\s]+)$/i;
 /** Sanctioned template tokens resolved from Site Settings at render time. */
 const TOKEN_RE = /^\{\{(identity\.(name|shortName)|social\.youtube)\}\}$/;
-const INTERNAL_LINK_RE = /^\/[A-Za-z0-9\-._~\/]*$/;
+const INTERNAL_LINK_RE = /^\/[A-Za-z0-9\-._~/]*$/;
 
 function requireString(value, label, max = STRING_MAX) {
   if (typeof value !== 'string' || value.trim().length === 0) {

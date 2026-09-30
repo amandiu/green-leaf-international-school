@@ -19,7 +19,6 @@
 
 import { verifySessionToken } from '../utils/sessionToken.js';
 import { SESSION_COOKIE_NAME } from '../utils/cookieSession.js';
-import { unauthorized } from '../utils/errors.js';
 import { findLivePwdAt } from '../models/User.js';
 
 /**

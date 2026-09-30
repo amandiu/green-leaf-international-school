@@ -6,9 +6,13 @@ function SectionWrapper({
   className = '',
   bg = 'bg-cream-50',
   padding = 'py-section',
+  // eslint-disable-next-line no-unused-vars -- accepted for API compat; no caller passes it (verified), so always-reveal is behavior-identical
   reveal = true,
 }) {
-  const ref = reveal ? useScrollReveal() : undefined;
+  // Hook must be called unconditionally (rules-of-hooks): the hook is
+  // side-effect-free until its ref attaches to a DOM element, so with
+  // reveal={false} it simply never attaches and does nothing.
+  const ref = useScrollReveal();
 
   return (
     <section id={id} className={`${bg} ${padding} ${className}`}>

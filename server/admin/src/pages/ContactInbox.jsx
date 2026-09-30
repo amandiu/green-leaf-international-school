@@ -18,7 +18,7 @@ import {
   setContactMessageStatus,
   deleteContactMessage,
 } from '../services/contactService';
-import { Alert, Loader } from '../components/Feedback';
+import { Alert } from '../components/Feedback';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const STATUS_LABEL = {

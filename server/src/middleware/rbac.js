@@ -44,7 +44,6 @@ import { PERMISSION_KEYS, ROLE_CODES } from '../validators/identityValidation.js
 import { getRolePermissions } from '../services/identityService.js';
 import { findSafeById } from '../models/User.js';
 import { findRoleMembershipByUserId } from '../models/UserRole.js';
-import { forbidden } from '../utils/errors.js';
 import { parseUserId } from '../services/ownershipScoping.js';
 
 /** Generic denial — never reveals which permission/role failed. */

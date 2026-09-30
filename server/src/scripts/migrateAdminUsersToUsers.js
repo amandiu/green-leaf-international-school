@@ -41,7 +41,7 @@ const BCRYPT_HASH_RE = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
 let problems = 0;
 function fail(msg) { problems += 1; console.log(`  ✖ ${msg}`); }
-function pass(msg) { console.log(`  ✔ ${msg}`); }
+function pass(msg) { console.log(`  ✔ ${msg}`); } // eslint-disable-line no-unused-vars -- reserved success-logger for future copy-gate steps
 
 async function main() {
   console.log(`\nGreen Leaf — admin_users → users canonical copy${VERIFY_ONLY ? ' (VERIFY ONLY)' : ''}\n`);

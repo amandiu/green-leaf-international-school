@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --exitcrash src/server.js",
     "start": "node src/server.js",
-    "lint": "eslint . --ext js --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "db:migrate": "node src/scripts/dbRun.js migrate",
     "db:seed": "node src/scripts/dbRun.js seed",
     "db:verify": "node src/scripts/dbRun.js verify",
@@ -27,6 +27,9 @@
     "sharp": "^0.35.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.12.0",
     "nodemon": "^3.1.7"
   }
 }

@@ -257,11 +257,15 @@ console.log('\n[8] Section active/inactive');
 // ============ 9. Image upload round-trip ============
 console.log('\n[9] Image upload (real bytes → DB → public API)');
 {
-  // Minimal valid 1x1 PNG
+  // Minimal valid 1x1 PNG (8-bit RGBA, correct CRCs). The previous
+  // synthetic hex was structurally corrupt — the IDAT chunk declared
+  // 13 data bytes but contained only 10 — so libpng aborted mid-chunk
+  // and the production sanitizer (failOn:'error') rejected it. This
+  // hex is byte-verified through sanitizeImageToWebp.
   const png = Buffer.from(
     '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489'
-    + '0000000d49444154789c6260000000060005'
-    + '27de41ba0000000049454e44ae426082', 'hex',
+    + '0000000d49444154789c63606060f80f00010401005fe5c34b'
+    + '0000000049454e44ae426082', 'hex',
   );
 
   const boundary = '----greenleaftest';

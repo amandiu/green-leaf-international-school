@@ -312,8 +312,6 @@ function SectionCard({ sectionKey, title, description, load, onUnauthorized }) {
 
 /* ---------- per-section field layouts ---------- */
 
-const ASSET_PLACEHOLDER = '/logo.jpg or https://…';
-
 export default function HomepageManagement({ onUnauthorized }) {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
@@ -487,7 +485,7 @@ export default function HomepageManagement({ onUnauthorized }) {
           title="Admissions CTA (shared content)"
           description="This band uses the reusable block 'admissions-primary-cta' — also shown on the Admissions page. Edit the content ONCE in Content Center → Reusable Content."
           onUnauthorized={onUnauthorized}
-          load={({ values, set }) => (
+          load={() => (
             <div className="mt-4 rounded-lg bg-charcoal-50 px-3 py-2 text-xs text-charcoal-600">
               <span className="font-semibold text-charcoal-700">Managed in:</span>{' '}
               Content Center → Reusable Content → Admissions Primary CTA.

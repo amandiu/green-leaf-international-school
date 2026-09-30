@@ -1524,6 +1524,31 @@ extension point).
 > revoke → 403 within ~30s, role removal/restoration, cache-TTL
 > liveness, escalation/IDOR attempts, deactivation fail-closed,
 > §AN.17 acceptance — every existing admin route passes as admin).
+>
+> **D4 note (2026-09-29):** the least-privilege defaults contract
+> (MASTER_PLAN Phase D item 4 + §G.2 "Default DENY") was audited
+> against this fabric and verified as ALREADY IMPLEMENTED — no new
+> authorization code, no migration, no C7 change. Enforced defaults,
+> now LOCKED by `scripts/test-d4-least-privilege.mjs` (34/34 live
+> DB+HTTP, registered ONCE in the C9 runner as `d4-least-privilege`):
+> creation requires EXPLICIT non-empty catalog-validated roles
+> (missing/null/empty → 400; forged code → 400 whitelist + FK
+> RESTRICT backstop; NO default role is ever invented); permissions
+> derive ONLY from `role_permissions` (delivered EMPTY — new users
+> hold ZERO permissions by default; `admin` passes solely via the
+> documented `admin` → `*` coarse default; no per-user permission
+> storage exists); missing/unknown roles and permission keys FAIL
+> CLOSED (403 after 401, live per-request resolution, generic
+> denial messages; unknown gate args are loud registration errors);
+> no permission-grant surface exists (grant attempt → 404); the C6
+> live admin-role check under `requirePermission('users.manage')`
+> means only `*`-permission admins create/assign admins (§G.3).
+> §G acceptance demonstrated live: two admins with different roles
+> see demonstrably different permissions on the same surfaces, and
+> a role-scoped admin cannot self-escalate (gate denies before any
+> service logic). Per-actor privilege comparison on assignment and
+> self-role-change restrictions are explicitly FUTURE work (no
+> authoritative specification exists today).
 
 ### AN.6 Ownership / data-scoping rules (PROPOSED — the portal contract)
 
@@ -1770,7 +1795,7 @@ only 401/503 lock the UI; no UI redesign).
 | XSS | React escaping, HttpOnly cookie | unchanged (no token in JS) | frontend |
 | Account enumeration | generic login errors; **C5** generic forgot/reset responses (byte-identical) | unchanged | service |
 | Reset abuse | **C5**: hashed one-time 60min tokens, double-bucket rate limits, admin-issued until email exists | unchanged | service+middleware |
-| Privilege escalation | single role (no surface) | roles+permissions; **C7 LIVE**: requireRole/requirePermission gates (`admin` → `*` wildcard, fail-closed 403, live DB resolution); C6 per-operation live checks preserved | middleware+service |
+| Privilege escalation | single role (no surface) | roles+permissions; **C7 LIVE**: requireRole/requirePermission gates (`admin` → `*` wildcard, fail-closed 403, live DB resolution); C6 per-operation live checks preserved; **D4 (2026-09-29)**: least-privilege defaults verified + locked (`scripts/test-d4-least-privilege.mjs` 34/34 — explicit roles, empty-derived permissions, fail-closed unknown/missing values, self-escalation denial) | middleware+service |
 | IDOR/BOLA | no portal data exists | ownership scoping (AN.6): session-resolved ids only — **primitives shipped in C3** (`services/ownershipScoping.js`); **C6** admin endpoints resolve ids server-side (path ids never widen authorization; stale claims cannot authorize — live checks) | service+model |
 | Guardian→wrong child / teacher→unassigned class | n/a | per-request link/assignment verification, generic 403/404 | service |
 | Admin abuse | no audit trail | audit_logs (Phase D, tracked) | Phase D |

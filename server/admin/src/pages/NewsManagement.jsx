@@ -19,7 +19,7 @@ import {
   setNewsStatus,
   deleteNewsItem,
 } from '../services/newsService';
-import { Alert, Loader } from '../components/Feedback';
+import { Alert } from '../components/Feedback';
 import ImageUploader from '../components/ImageUploader';
 
 const TYPES = ['NEWS', 'NOTICE', 'EVENT', 'ANNOUNCEMENT'];

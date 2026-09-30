@@ -26,13 +26,13 @@
 // ------------------------------------------------------------
 
 import {
-  findAll, findByKey, insert, update, remove,
+  findAll, findByKey, insert, update,
 } from '../models/ContentBlock.js';
 import {
   findByPage, findPageSection, upsertSection,
 } from '../models/PageSection.js';
 import {
-  validateBlockPayload, validateBlockKey,
+  validateBlockPayload,
 } from '../validators/contentBlockValidation.js';
 import { notFound, badRequest, conflict } from '../utils/errors.js';
 import {

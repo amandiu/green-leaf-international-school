@@ -261,6 +261,7 @@ function BlockCard({ block, usage, onSave, onToggle, onDelete, saving }) {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars -- retained plumbing for the documented DELETE /api/admin/content/blocks contract; the UI deliberately renders no delete button (no feature work in remediation)
   const handleDelete = async () => {
     setError('');
     try {

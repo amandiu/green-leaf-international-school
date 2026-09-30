@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { siteConfig } from '../../../shared/config/siteConfig';
 import { SectionWrapper } from '../Components/ui/SectionWrapper';
 import { CardBadge } from '../Components/ui/Card';
 import { getPublishedNewsBySlug } from '../services/newsService';
