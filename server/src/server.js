@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import 'dotenv/config'; // must be first — loads server/.env before any service reads process.env
 import { siteConfig } from '../../shared/config/siteConfig.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';

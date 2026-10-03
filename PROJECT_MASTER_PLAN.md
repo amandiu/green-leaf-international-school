@@ -627,7 +627,7 @@ Proposed / future (PROPOSED — public + admin pairs unless noted):
 - [x] /api/contact (public POST) + /api/admin/contact-messages
 - [x] /api/downloads (public list/categories + secure DB-mediated file serving) + /api/admin/downloads (full CRUD + status) (**Phase B.6**)
 - [ ] /api/teachers (public directory) + /api/admin/teachers
-- [ ] /api/auth/forgot-password + /api/auth/reset-password + /api/auth/change-password (**Phase C.5** — DONE: change-password authenticated; forgot/reset are the admin-issued mechanics; public email reset activates when the notification adapter exists)
+- [ ] /api/auth/forgot-password + /api/auth/reset-password + /api/auth/change-password (**Phase C.5** — DONE: change-password authenticated; forgot/reset are the admin-issued mechanics; public email reset activates when the notification adapter exists) — **Phase 2 UPDATE: /api/auth/forgot-password now issues + emails 6-digit verification codes (password_reset_codes table, hash-only storage, 10-min expiry via PASSWORD_RESET_CODE_EXPIRY_MINUTES, SMTP via nodemailer; dev console preview when SMTP_HOST is unset outside production). Reset-code VERIFICATION endpoint lands in Phase 3; /api/auth/reset-password (token flow) remains admin-issued mechanics.**
 - [ ] /api/events (upcoming view) — or extend /api/news filters
 - [ ] /api/academics content (calendar, routines, syllabi) + admin
 - [ ] /api/admissions (content + applications) + admin

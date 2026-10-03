@@ -4,6 +4,8 @@ import { siteConfig } from '../../../shared/config/siteConfig';
 import useAdminAuth from './hooks/useAdminAuth';
 import AuthGate from './components/AuthGate';
 import LoginPage from './pages/LoginPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import NavigationManagement from './pages/NavigationManagement';
 import LeadershipManagement from './pages/LeadershipManagement';
 import SiteSettings from './pages/SiteSettings';
@@ -189,6 +191,16 @@ function App() {
       <Route
         path="/login"
         element={<LoginPage user={user} initializing={initializing} onLogin={login} />}
+      />
+      {/* Phase 1/2: public route — request the verification code. */}
+      <Route
+        path="/forgot-password"
+        element={<ForgotPasswordPage />}
+      />
+      {/* Phase 3: public route — verify code + set new password. */}
+      <Route
+        path="/reset-password"
+        element={<ResetPasswordPage />}
       />
       <Route
         path="/dashboard"
